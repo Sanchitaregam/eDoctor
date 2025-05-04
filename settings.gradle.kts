@@ -1,9 +1,22 @@
-// Root build.gradle.kts — should NOT have any `plugins` block
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    plugins {
+        id("com.android.application") version "8.2.0"
+        id("org.jetbrains.kotlin.android") version "1.9.22"
+    }
+}
 
-// Keep it empty or just define repositories if needed
-buildscript {
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
     }
 }
+
+rootProject.name = "eDoctor"
+include(":app")
