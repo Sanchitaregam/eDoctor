@@ -27,6 +27,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
+import com.example.edoctor.EnhancedDoctorRegistrationScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +39,7 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "welcome") {
                         composable("welcome") { WelcomeScreen(navController) }
                         composable("register") { RegisterRoleScreen(navController) }
+                        composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
                     }
                 }
             }
@@ -172,12 +174,13 @@ fun RegisterRoleScreen(navController: NavController) {
             }
 
             Button(
-                onClick = { /* TODO: Navigate to Doctor Registration */ },
+                onClick = { navController.navigate("doctor_registration") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
             ) {
                 Text("Register as Doctor")
+            }
             }
 
             Button(
@@ -190,7 +193,7 @@ fun RegisterRoleScreen(navController: NavController) {
             }
         }
     }
-}
+
 
 @Preview(showBackground = true)
 @Composable
