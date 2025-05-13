@@ -1,3 +1,5 @@
+
+
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.example.edoctor
@@ -18,9 +20,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import java.util.regex.Pattern
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EnhancedDoctorRegistrationScreen(navController: NavController) {
+fun PatientRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -28,49 +29,60 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
     var gender by remember { mutableStateOf("") }
     var showGenderDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    var messageColor by remember { mutableStateOf(Color.Red) }
 
-    fun isValidEmail(email: String): Boolean {
-        val emailPattern = Pattern.compile("^[A-Za-z](.*)([@]{1})(.{1,})(\\.)(.{1,})")
-        return emailPattern.matcher(email).matches()
-    }
-
-    fun isValidPhone(phone: String): Boolean {
-        return phone.length == 10 && phone.all { it.isDigit() }
+    fun validateAndSubmit() {
+        when {
+            name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || gender.isBlank() -> {
+                message = "Please fill all fields."
+            }
+            !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                message = "Invalid email address."
+            }
+            !Pattern.matches("^[0-9]{10}\$", phone) -> {
+                message = "Phone number must be 10 digits."
+            }
+            else -> {
+                message = "Registration successful!"
+                // TODO: Save to database later
+            }
+        }
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xFFF0F0F0)),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF0F0F0)),
         contentAlignment = Alignment.Center
     ) {
         Card(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(0.9f),
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(0.9f),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 BackButton(navController)
 
                 Text(
-                    text = "Fill Your Details to Register as Doctor",
+                    text = "Fill Your Details to Register as Patient",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
-                Text("Doctor Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
+                Text("Patient Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
+                OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") })
+                OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") })
 
-                ExposedDropdownMenuBox(
-                    expanded = showGenderDropdown,
-                    onExpandedChange = { showGenderDropdown = !showGenderDropdown }
-                ) {
+                ExposedDropdownMenuBox(expanded = showGenderDropdown, onExpandedChange = { showGenderDropdown = !showGenderDropdown }) {
                     OutlinedTextField(
                         value = gender,
                         onValueChange = {},
@@ -90,32 +102,17 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
                 }
 
                 Button(
-                    onClick = {
-                        messageColor = Color.Red
-                        when {
-                            name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || gender.isBlank() ->
-                                message = "Please fill all fields."
-                            !isValidEmail(email) ->
-                                message = "Invalid email format."
-                            !isValidPhone(phone) ->
-                                message = "Phone number must be exactly 10 digits."
-                            else -> {
-                                message = "Registration Successful!"
-                                messageColor = Color.Green
-                            }
-                        }
-                    },
+                    onClick = { validateAndSubmit() },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Register", fontSize = 16.sp)
+                    Text("Register")
                 }
 
                 if (message.isNotEmpty()) {
                     Text(
                         text = message,
-                        color = messageColor,
-                        fontSize = 14.sp,
+                        color = if (message == "Registration successful!") Color.Green else Color.Red,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }

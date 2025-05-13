@@ -40,6 +40,8 @@ class MainActivity : ComponentActivity() {
                         composable("welcome") { WelcomeScreen(navController) }
                         composable("register") { RegisterRoleScreen(navController) }
                         composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
+                        composable("patient_registration") { PatientRegistrationScreen(navController) }
+                        composable("admin_registration") { AdminRegistrationScreen(navController) }
                     }
                 }
             }
@@ -165,7 +167,7 @@ fun RegisterRoleScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Button(
-                onClick = { /* TODO: Navigate to Patient Registration */ },
+                onClick = { navController.navigate("patient_registration") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
@@ -183,14 +185,12 @@ fun RegisterRoleScreen(navController: NavController) {
             }
             }
 
-            Button(
-                onClick = { /* TODO: Navigate to Admin Registration */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            ) {
-                Text("Register as Admin")
-            }
+        Button(
+            onClick = { navController.navigate("admin_registration") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+        ) {
+            Text("Register as Admin")
+        }
         }
     }
 
