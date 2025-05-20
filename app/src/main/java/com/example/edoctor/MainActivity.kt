@@ -187,7 +187,9 @@ fun RegisterRoleScreen(navController: NavController) {
 
         Button(
             onClick = { navController.navigate("admin_registration") },
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
         ) {
             Text("Register as Admin")
         }

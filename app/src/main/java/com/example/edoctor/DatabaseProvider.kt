@@ -3,21 +3,19 @@ package com.example.edoctor
 import android.content.Context
 import androidx.room.Room
 
-object DatabaseHandler {
+object DatabaseProvider {
+    @Volatile
     private var INSTANCE: AppDatabase? = null
 
     fun getDatabase(context: Context): AppDatabase {
-        if (INSTANCE == null) {
-            INSTANCE = Room.databaseBuilder(
+        return INSTANCE ?: synchronized(this) {
+            val instance = Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "app_database"
             ).build()
+            INSTANCE = instance
+            instance
         }
-        return INSTANCE!!
-    }
-
-    suspend fun authenticateUser(context: Context, email: String, password: String): UserEntity? {
-        return getDatabase(context).userDao().login(email, password)
     }
 }

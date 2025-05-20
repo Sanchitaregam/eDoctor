@@ -20,6 +20,29 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import java.util.regex.Pattern
 
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.room.Room
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+@Composable
+fun savePatientToDatabase(name: String, email: String, phone: String, password: String, gender: String,role: String ) {
+    val context = LocalContext.current
+    val db = Room.databaseBuilder(
+        context,
+        AppDatabase::class.java,
+        "user_database"
+    ).build()
+
+    val userDao = db.userDao()
+    val user = UserEntity(0, name, email, phone, password, gender,role)
+
+    CoroutineScope(Dispatchers.IO).launch {
+        userDao.insertUser(user)
+    }
+}
 @Composable
 fun PatientRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
@@ -29,6 +52,7 @@ fun PatientRegistrationScreen(navController: NavController) {
     var gender by remember { mutableStateOf("") }
     var showGenderDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
+    val passwordStrength = validatePasswordStrength(password)
 
     fun validateAndSubmit() {
         when {
@@ -80,7 +104,23 @@ fun PatientRegistrationScreen(navController: NavController) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") })
-                OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") })
+// Password Field
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+// Password Strength Feedback
+                val (strengthMessage, strengthColor) = validatePasswordStrength(password)
+
+                Text(
+                    text = strengthMessage,
+                    color = strengthColor,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
 
                 ExposedDropdownMenuBox(expanded = showGenderDropdown, onExpandedChange = { showGenderDropdown = !showGenderDropdown }) {
                     OutlinedTextField(

@@ -18,7 +18,30 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import java.util.regex.Pattern
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
+import androidx.room.Room
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
+@Composable
+fun saveDoctorToDatabase(name: String, email: String, phone: String, password: String, gender: String,role: String ) {
+    val context = LocalContext.current
+    val db = Room.databaseBuilder(
+        context,
+        AppDatabase::class.java,
+        "user_database"
+    ).build()
+
+    val userDao = db.userDao()
+    val user = UserEntity(0, name, email, phone, password, gender, role)
+
+    CoroutineScope(Dispatchers.IO).launch {
+        userDao.insertUser(user)
+    }
+}
+
 @Composable
 fun EnhancedDoctorRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
@@ -29,6 +52,7 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
     var showGenderDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var messageColor by remember { mutableStateOf(Color.Red) }
+    val passwordStrength = validatePasswordStrength(password)
 
     fun isValidEmail(email: String): Boolean {
         val emailPattern = Pattern.compile("^[A-Za-z](.*)([@]{1})(.{1,})(\\.)(.{1,})")
@@ -65,8 +89,23 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+// Password Field
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    modifier = Modifier.fillMaxWidth()
+                )
 
+// Password Strength Feedback
+                val (strengthMessage, strengthColor) = validatePasswordStrength(password)
+
+                Text(
+                    text = strengthMessage,
+                    color = strengthColor,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
                 ExposedDropdownMenuBox(
                     expanded = showGenderDropdown,
                     onExpandedChange = { showGenderDropdown = !showGenderDropdown }
