@@ -12,35 +12,41 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.util.regex.Pattern
-
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.regex.Pattern
 
-@Composable
-fun saveDoctorToDatabase(name: String, email: String, phone: String, password: String, gender: String,role: String ) {
-    val context = LocalContext.current
-    val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "user_database"
-    ).build()
-
+fun saveDoctorToDatabase(
+    context: android.content.Context,
+    name: String,
+    email: String,
+    phone: String,
+    password: String,
+    gender: String,
+    role: String,
+    onResult: (Boolean) -> Unit
+) {
+    val db = DatabaseProvider.getDatabase(context) // ✅ Singleton usage
     val userDao = db.userDao()
     val user = UserEntity(0, name, email, phone, password, gender, role)
 
     CoroutineScope(Dispatchers.IO).launch {
-        userDao.insertUser(user)
+        try {
+            userDao.insertUser(user)
+            onResult(true)
+        } catch (e: Exception) {
+            onResult(false)
+        }
     }
 }
+
 
 @Composable
 fun EnhancedDoctorRegistrationScreen(navController: NavController) {
@@ -52,7 +58,9 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
     var showGenderDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
     var messageColor by remember { mutableStateOf(Color.Red) }
-    val passwordStrength = validatePasswordStrength(password)
+
+    val context = LocalContext.current
+    val role = "doctor"
 
     fun isValidEmail(email: String): Boolean {
         val emailPattern = Pattern.compile("^[A-Za-z](.*)([@]{1})(.{1,})(\\.)(.{1,})")
@@ -78,18 +86,13 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
             ) {
                 BackButton(navController)
 
-                Text(
-                    text = "Fill Your Details to Register as Doctor",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                )
+                Text("Fill Your Details to Register as Doctor", fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
                 Text("Doctor Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
 
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") }, modifier = Modifier.fillMaxWidth())
-// Password Field
+
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
@@ -97,15 +100,10 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
                     modifier = Modifier.fillMaxWidth()
                 )
 
-// Password Strength Feedback
                 val (strengthMessage, strengthColor) = validatePasswordStrength(password)
+                Text(text = strengthMessage, color = strengthColor, fontSize = 12.sp)
 
-                Text(
-                    text = strengthMessage,
-                    color = strengthColor,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                // Gender Dropdown
                 ExposedDropdownMenuBox(
                     expanded = showGenderDropdown,
                     onExpandedChange = { showGenderDropdown = !showGenderDropdown }
@@ -132,15 +130,28 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
                     onClick = {
                         messageColor = Color.Red
                         when {
-                            name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || gender.isBlank() ->
+                            name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || gender.isBlank() -> {
                                 message = "Please fill all fields."
-                            !isValidEmail(email) ->
+                            }
+                            !isValidEmail(email) -> {
                                 message = "Invalid email format."
-                            !isValidPhone(phone) ->
+                            }
+                            !isValidPhone(phone) -> {
                                 message = "Phone number must be exactly 10 digits."
+                            }
+                            password.length < 6 -> {
+                                message = "Password must be at least 6 characters."
+                            }
                             else -> {
-                                message = "Registration Successful!"
-                                messageColor = Color.Green
+                                saveDoctorToDatabase(context, name, email, phone, password, gender, role) { success ->
+                                    if (success) {
+                                        message = "Doctor Registered Successfully!"
+                                        messageColor = Color.Green
+                                    } else {
+                                        message = "Failed to register. Try again."
+                                        messageColor = Color.Red
+                                    }
+                                }
                             }
                         }
                     },

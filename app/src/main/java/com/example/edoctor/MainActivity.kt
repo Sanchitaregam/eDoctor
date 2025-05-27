@@ -8,26 +8,22 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
-import com.example.edoctor.EnhancedDoctorRegistrationScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,9 +35,24 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = "welcome") {
                         composable("welcome") { WelcomeScreen(navController) }
                         composable("register") { RegisterRoleScreen(navController) }
+                        composable("select_login_role") { LoginRoleScreen(navController) }
+                        composable("login/{role}") { backStackEntry ->
+                            val role = backStackEntry.arguments?.getString("role") ?: "unknown"
+                            LoginScreen(navController, role)
+                        }
                         composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
                         composable("patient_registration") { PatientRegistrationScreen(navController) }
                         composable("admin_registration") { AdminRegistrationScreen(navController) }
+                        composable("doctor_profile") { DoctorProfileScreen(navController) }
+                        composable("patient_profile/{userId}") { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                            PatientProfileScreen(navController, userId)
+                        }
+                        composable("patient_details/{userId}") { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                            PatientDetailsScreen(navController, userId) // Called from PatientDetailsScreen.kt
+                        }
+                        composable("admin_profile") { AdminProfileScreen(navController) }
                     }
                 }
             }
@@ -74,7 +85,6 @@ fun WelcomeScreen(navController: NavController) {
         verticalArrangement = Arrangement.SpaceEvenly,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
         AnimatedVisibility(
             visible = showLogo,
             enter = slideInHorizontally(initialOffsetX = { -200 }) + fadeIn()
@@ -123,7 +133,7 @@ fun WelcomeScreen(navController: NavController) {
                 enter = slideInHorizontally(initialOffsetX = { -200 }) + fadeIn()
             ) {
                 Button(
-                    onClick = { /* TODO: Navigate to Login */ },
+                    onClick = { navController.navigate("select_login_role") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -183,24 +193,15 @@ fun RegisterRoleScreen(navController: NavController) {
             ) {
                 Text("Register as Doctor")
             }
+
+            Button(
+                onClick = { navController.navigate("admin_registration") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text("Register as Admin")
             }
-
-        Button(
-            onClick = { navController.navigate("admin_registration") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-        ) {
-            Text("Register as Admin")
         }
-        }
-    }
-
-
-@Preview(showBackground = true)
-@Composable
-fun WelcomeScreenPreview() {
-    EDoctorTheme {
-        // NavController cannot be used in preview
     }
 }

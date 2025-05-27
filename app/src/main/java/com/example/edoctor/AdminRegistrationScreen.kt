@@ -1,5 +1,3 @@
-
-
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.example.edoctor
@@ -9,43 +7,54 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Composable
-fun saveAdminToDatabase(name: String, email: String, phone: String, password: String, gender: String, role: String ) {
-    val context = LocalContext.current
-    val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "user_database"
-    ).build()
-
+fun saveAdminToDatabase(
+    context: android.content.Context,
+    name: String,
+    email: String,
+    phone: String,
+    password: String,
+    gender: String,
+    role: String,
+    onResult: (Boolean) -> Unit
+) {
+    val db = DatabaseProvider.getDatabase(context) // ✅ Singleton instance
     val userDao = db.userDao()
     val user = UserEntity(0, name, email, phone, password, gender, role)
 
     CoroutineScope(Dispatchers.IO).launch {
-        userDao.insertUser(user)
+        try {
+            userDao.insertUser(user)
+            onResult(true)
+        } catch (e: Exception) {
+            onResult(false)
+        }
     }
 }
+
 
 @Composable
 fun AdminRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("Other") } // Example default
+    val role = "admin"
 
     var errorMessage by remember { mutableStateOf("") }
     var successMessage by remember { mutableStateOf("") }
-    val passwordStrength = validatePasswordStrength(password)
+
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -59,8 +68,7 @@ fun AdminRegistrationScreen(navController: NavController) {
         Text(
             text = "Fill Your Details to Register as Admin",
             fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            fontWeight = FontWeight.Bold
         )
         Text("Admin Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold)
 
@@ -79,7 +87,14 @@ fun AdminRegistrationScreen(navController: NavController) {
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth()
         )
-// Password Field
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Phone") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -87,7 +102,6 @@ fun AdminRegistrationScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
-// Password Strength Feedback
         val (strengthMessage, strengthColor) = validatePasswordStrength(password)
 
         Text(
@@ -96,7 +110,6 @@ fun AdminRegistrationScreen(navController: NavController) {
             fontSize = 12.sp,
             modifier = Modifier.padding(top = 4.dp)
         )
-
 
         if (errorMessage.isNotEmpty()) {
             Text(text = errorMessage, color = MaterialTheme.colorScheme.error)
@@ -109,7 +122,7 @@ fun AdminRegistrationScreen(navController: NavController) {
         Button(
             onClick = {
                 when {
-                    name.isBlank() || email.isBlank() || password.isBlank() -> {
+                    name.isBlank() || email.isBlank() || password.isBlank() || phone.isBlank() -> {
                         errorMessage = "Please fill all fields"
                         successMessage = ""
                     }
@@ -123,7 +136,21 @@ fun AdminRegistrationScreen(navController: NavController) {
                     }
                     else -> {
                         errorMessage = ""
-                        successMessage = "Admin Registered Successfully!"
+                        saveAdminToDatabase(
+                            context,
+                            name,
+                            email,
+                            phone,
+                            password,
+                            gender,
+                            role
+                        ) { success ->
+                            if (success) {
+                                successMessage = "Admin Registered Successfully!"
+                            } else {
+                                errorMessage = "Error saving admin to database"
+                            }
+                        }
                     }
                 }
             },

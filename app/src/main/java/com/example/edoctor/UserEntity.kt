@@ -11,5 +11,9 @@ data class UserEntity(
     val phone: String,
     val password: String,
     val gender: String,
-    val role: String // ✅ Make sure this line exists
+    val role: String ,
+    val dob: String? = null,
+    val address: String? = null,
+    val bloodGroup: String? = null,
+    val emergencyContact: String? = null
 )

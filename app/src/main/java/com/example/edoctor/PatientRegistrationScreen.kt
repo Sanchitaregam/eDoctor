@@ -1,9 +1,8 @@
-
-
 @file:OptIn(ExperimentalMaterial3Api::class)
 
 package com.example.edoctor
 
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,35 +13,42 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.util.regex.Pattern
-
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.room.Room
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.regex.Pattern
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
-@Composable
-fun savePatientToDatabase(name: String, email: String, phone: String, password: String, gender: String,role: String ) {
-    val context = LocalContext.current
-    val db = Room.databaseBuilder(
-        context,
-        AppDatabase::class.java,
-        "user_database"
-    ).build()
-
+// ✅ Moved out of composable
+fun savePatientToDatabase(
+    context: Context,
+    name: String,
+    email: String,
+    phone: String,
+    password: String,
+    gender: String,
+    role: String = "patient",
+    onResult: (Boolean) -> Unit
+) {
+    val db = DatabaseProvider.getDatabase(context)
     val userDao = db.userDao()
-    val user = UserEntity(0, name, email, phone, password, gender,role)
+    val user = UserEntity(0, name, email, phone, password, gender, role)
 
     CoroutineScope(Dispatchers.IO).launch {
-        userDao.insertUser(user)
+        try {
+            userDao.insertUser(user)
+            onResult(true)
+        } catch (e: Exception) {
+            onResult(false)
+        }
     }
 }
+
 @Composable
 fun PatientRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
@@ -52,7 +58,9 @@ fun PatientRegistrationScreen(navController: NavController) {
     var gender by remember { mutableStateOf("") }
     var showGenderDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
-    val passwordStrength = validatePasswordStrength(password)
+
+    val (strengthMessage, strengthColor) = validatePasswordStrength(password)
+    val context = LocalContext.current
 
     fun validateAndSubmit() {
         when {
@@ -65,9 +73,21 @@ fun PatientRegistrationScreen(navController: NavController) {
             !Pattern.matches("^[0-9]{10}\$", phone) -> {
                 message = "Phone number must be 10 digits."
             }
+            password.length < 6 -> {
+                message = "Password must be at least 6 characters."
+            }
             else -> {
-                message = "Registration successful!"
-                // TODO: Save to database later
+                savePatientToDatabase(
+                    context,
+                    name,
+                    email,
+                    phone,
+                    password,
+                    gender,
+                    "patient"
+                ) { success ->
+                    message = if (success) "Registration successful!" else "Failed to save patient to database."
+                }
             }
         }
     }
@@ -104,16 +124,14 @@ fun PatientRegistrationScreen(navController: NavController) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
                 OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") })
-// Password Field
+
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth()
                 )
-
-// Password Strength Feedback
-                val (strengthMessage, strengthColor) = validatePasswordStrength(password)
 
                 Text(
                     text = strengthMessage,
@@ -122,7 +140,10 @@ fun PatientRegistrationScreen(navController: NavController) {
                     modifier = Modifier.padding(top = 4.dp)
                 )
 
-                ExposedDropdownMenuBox(expanded = showGenderDropdown, onExpandedChange = { showGenderDropdown = !showGenderDropdown }) {
+                ExposedDropdownMenuBox(
+                    expanded = showGenderDropdown,
+                    onExpandedChange = { showGenderDropdown = !showGenderDropdown }
+                ) {
                     OutlinedTextField(
                         value = gender,
                         onValueChange = {},
@@ -131,19 +152,27 @@ fun PatientRegistrationScreen(navController: NavController) {
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Gender") },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )
-                    ExposedDropdownMenu(expanded = showGenderDropdown, onDismissRequest = { showGenderDropdown = false }) {
+                    ExposedDropdownMenu(
+                        expanded = showGenderDropdown,
+                        onDismissRequest = { showGenderDropdown = false }
+                    ) {
                         listOf("Male", "Female", "Other").forEach { option ->
-                            DropdownMenuItem(text = { Text(option) }, onClick = {
-                                gender = option
-                                showGenderDropdown = false
-                            })
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    gender = option
+                                    showGenderDropdown = false
+                                }
+                            )
                         }
                     }
                 }
 
                 Button(
                     onClick = { validateAndSubmit() },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("Register")
