@@ -12,7 +12,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 
 @Composable
-fun AdminProfileScreen(navController: NavController) {
+fun AdminProfileScreen(navController: NavController, userId: Int) {
+    // Use userId here
+
     Box(
         modifier = Modifier
             .fillMaxSize()

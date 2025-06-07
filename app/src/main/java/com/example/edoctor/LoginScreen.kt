@@ -30,7 +30,7 @@ fun LoginScreen(navController: NavController, role: String) {
         "doctor" -> "Doctor Login"
         "patient" -> "Patient Login"
         "admin" -> "Admin Login"
-        else -> "User Login"
+        else -> "Login"
     }
 
     Box(
@@ -90,11 +90,15 @@ fun LoginScreen(navController: NavController, role: String) {
                                     .login(email, password)
 
                                 if (user != null && user.role.equals(role, ignoreCase = true)) {
-                                    Toast.makeText(context, "Login Successful", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Login Successful",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     when (user.role.lowercase()) {
-                                        "doctor" -> navController.navigate("doctor_profile")
+                                        "doctor" -> navController.navigate("doctor_profile/${user.id}")
                                         "patient" -> navController.navigate("patient_profile/${user.id}")
-                                        "admin" -> navController.navigate("admin_profile")
+                                        "admin" -> navController.navigate("admin_profile/${user.id}")
                                         else -> errorMessage = "Unknown role"
                                     }
                                 } else {

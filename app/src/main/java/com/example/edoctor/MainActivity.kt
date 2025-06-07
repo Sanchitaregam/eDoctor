@@ -8,8 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,9 +17,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
 
@@ -40,26 +40,49 @@ class MainActivity : ComponentActivity() {
                             val role = backStackEntry.arguments?.getString("role") ?: "unknown"
                             LoginScreen(navController, role)
                         }
-                        composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
+
                         composable("patient_registration") { PatientRegistrationScreen(navController) }
                         composable("admin_registration") { AdminRegistrationScreen(navController) }
-                        composable("doctor_profile") { DoctorProfileScreen(navController) }
-                        composable("patient_profile/{userId}") { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+
+                        composable(
+                            "doctor_profile/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            DoctorProfileScreen(navController, userId)
+                        }
+
+                        composable(
+                            "patient_profile/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             PatientProfileScreen(navController, userId)
                         }
-                        composable("patient_details/{userId}") { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getString("userId") ?: ""
-                            PatientDetailsScreen(navController, userId) // Called from PatientDetailsScreen.kt
+
+                        composable(
+                            "admin_profile/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            AdminProfileScreen(navController, userId)
                         }
-                        composable("admin_profile") { AdminProfileScreen(navController) }
+
+                        composable(
+                            "patient_details/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                            PatientDetailsScreen(navController, userId)
+                        }
+
+
                     }
                 }
             }
         }
     }
 }
-
 @Composable
 fun WelcomeScreen(navController: NavController) {
     var showLogo by remember { mutableStateOf(false) }
