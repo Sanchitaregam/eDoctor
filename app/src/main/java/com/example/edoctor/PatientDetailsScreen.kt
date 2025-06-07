@@ -33,7 +33,7 @@ fun PatientDetailsScreen(navController: NavController, userId: String) {
 
     LaunchedEffect(userId) {
         user = withContext(Dispatchers.IO) {
-            userDao.getUserById(userId.toInt())
+            userDao.getUserById(userId.toString())
         }
     }
 

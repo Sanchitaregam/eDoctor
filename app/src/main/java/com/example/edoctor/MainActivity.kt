@@ -42,6 +42,12 @@ class MainActivity : ComponentActivity() {
                         }
 
                         composable("patient_registration") { PatientRegistrationScreen(navController) }
+
+                        // ✅ Using the EnhancedDoctorRegistrationScreen
+                        composable("doctor_registration") {
+                            EnhancedDoctorRegistrationScreen(navController)
+                        }
+
                         composable("admin_registration") { AdminRegistrationScreen(navController) }
 
                         composable(
@@ -75,14 +81,13 @@ class MainActivity : ComponentActivity() {
                             val userId = backStackEntry.arguments?.getString("userId") ?: ""
                             PatientDetailsScreen(navController, userId)
                         }
-
-
                     }
                 }
             }
         }
     }
 }
+
 @Composable
 fun WelcomeScreen(navController: NavController) {
     var showLogo by remember { mutableStateOf(false) }
