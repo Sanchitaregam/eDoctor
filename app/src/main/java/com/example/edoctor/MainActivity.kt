@@ -57,6 +57,14 @@ class MainActivity : ComponentActivity() {
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             DoctorProfileScreen(navController, userId)
                         }
+                        composable(
+                            "edit_doctor_profile/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) {
+                            val userId = it.arguments?.getInt("userId") ?: 0
+                            EditDoctorProfileScreen(navController, userId)
+                        }
+
 
                         composable(
                             "patient_profile/{userId}",
@@ -81,6 +89,25 @@ class MainActivity : ComponentActivity() {
                             val userId = backStackEntry.arguments?.getString("userId") ?: ""
                             PatientDetailsScreen(navController, userId)
                         }
+                        composable("edit_doctor_profile/{userId}", arguments = listOf(navArgument("userId") { type = NavType.IntType })) {
+                            val userId = it.arguments?.getInt("userId") ?: 0
+                            EditDoctorProfileScreen(navController, userId)
+                        }
+                        composable(
+                            "doctor_availability/{doctorId}",
+                            arguments = listOf(navArgument("doctorId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
+                            DoctorAvailabilityScreen(navController, doctorId)
+                        }
+                        composable("calendar") {
+                            CalendarScreen { selectedDate ->
+                                // Handle date (e.g., pass to appointment booking)
+                                println("Selected date: $selectedDate")
+                            }
+                        }
+
+
                     }
                 }
             }
@@ -181,6 +208,10 @@ fun WelcomeScreen(navController: NavController) {
                     Text("Register")
                 }
             }
+            Button(onClick = { navController.navigate("calendar") }) {
+                Text("Pick Appointment Date")
+            }
+
         }
     }
 }

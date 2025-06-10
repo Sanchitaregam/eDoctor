@@ -21,6 +21,21 @@ import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import androidx.compose.runtime.*
+import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.material.icons.filled.ArrowBack
+
+
+
+
 
 @Composable
 fun DoctorProfileScreen(navController: NavController, userId: Int) {
@@ -89,6 +104,13 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 FeatureCard("Messages", R.drawable.ic_chat) {
                     navController.navigate("messages_screen/$userId")
                 }
+                FeatureCard("Edit Profile", R.drawable.ic_profile) {
+                    navController.navigate("edit_doctor_profile/$userId")
+                }
+                FeatureCard("Availability", R.drawable.ic_calendar) {
+                    navController.navigate("doctor_availability/$userId")
+                }
+
             }
         }
 
@@ -164,3 +186,82 @@ fun MessagesScreen() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
+    val context = LocalContext.current
+    val db = remember { DatabaseProvider.getDatabase(context) }
+    val userDao = db.userDao()
+    val coroutineScope = rememberCoroutineScope()
+
+    var user by remember { mutableStateOf<UserEntity?>(null) }
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var experience by remember { mutableStateOf("") }
+
+    LaunchedEffect(userId) {
+        val fetchedUser = withContext(Dispatchers.IO) {
+            userDao.getUserById(userId.toString())
+        }
+        fetchedUser?.let {
+            user = it
+            name = it.name
+            phone = it.phone
+            (it.experience ?: "").also { experience = it }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Edit Profile") }, navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                })
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(24.dp)
+                .fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Full Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = phone,
+                onValueChange = { phone = it },
+                label = { Text("Phone Number") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = experience,
+                onValueChange = { experience = it },
+                label = { Text("Experience (e.g. 10 years)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        user?.let {
+                            val updated = it.copy(name = name, phone = phone, experience = experience)
+                            withContext(Dispatchers.IO) {
+                                userDao.updateUser(updated)
+                            }
+                            navController.popBackStack()
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Save Changes")
+            }
+        }
+    }
+}

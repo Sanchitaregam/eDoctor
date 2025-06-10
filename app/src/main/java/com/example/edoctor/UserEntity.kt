@@ -6,14 +6,15 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "users")
 data class UserEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val name: String,
-    val email: String,
-    val phone: String,
-    val password: String,
-    val gender: String,
-    val role: String ,
-    val dob: String? = null,
-    val address: String? = null,
-    val bloodGroup: String? = null,
-    val emergencyContact: String? = null
+    var name: String,
+    var email: String,
+    var phone: String,
+    var password: String,
+    var gender: String,
+    var role: String,
+    var dob: String? = null,
+    var address: String? = null,
+    var bloodGroup: String? = null,
+    var emergencyContact: String? = null,
+    var experience: String? = null  // ✅ Moved here and marked as var
 )
