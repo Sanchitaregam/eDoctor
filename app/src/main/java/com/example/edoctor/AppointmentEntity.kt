@@ -7,8 +7,9 @@ import androidx.room.PrimaryKey
 data class AppointmentEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val doctorId: Int,
+    val patientId: Int,
     val patientName: String,
     val date: String,
     val time: String,
-    val notes: String? = null
+    val notes: String? = null  // <- this is the correct way
 )

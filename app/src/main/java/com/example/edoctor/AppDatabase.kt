@@ -5,14 +5,9 @@ import androidx.room.RoomDatabase
 import com.example.edoctor.dao.AvailabilityDao
 import com.example.edoctor.AppointmentDao
 import com.example.edoctor.UserDao
-
 @Database(
-    entities = [
-        UserEntity::class,
-        AppointmentEntity::class,
-        AvailabilityEntity::class
-    ],
-    version = 3,
+    entities = [UserEntity::class, AppointmentEntity::class, AvailabilityEntity::class],
+    version = 4, // 🔼 increase the version number
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

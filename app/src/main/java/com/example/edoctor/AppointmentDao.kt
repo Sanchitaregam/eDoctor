@@ -1,20 +1,18 @@
 package com.example.edoctor
 
-
 import androidx.room.*
+import com.example.edoctor.AppointmentEntity
 
 @Dao
 interface AppointmentDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAppointment(appointment: AppointmentEntity)
 
-    @Insert
-    suspend fun addAppointment(appointment: AppointmentEntity)
 
-    @Query("SELECT * FROM appointments WHERE doctorId = :doctorId ORDER BY date, time")
+
+    @Query("SELECT * FROM appointments WHERE patientId = :patientId")
+    suspend fun getAppointmentsByPatientId(patientId: Int): List<AppointmentEntity>
+    @Query("SELECT * FROM appointments WHERE doctorId = :doctorId")
     suspend fun getAppointmentsForDoctor(doctorId: Int): List<AppointmentEntity>
 
-    @Delete
-    suspend fun deleteAppointment(appointment: AppointmentEntity)
-
-    @Update
-    suspend fun updateAppointment(appointment: AppointmentEntity)
 }

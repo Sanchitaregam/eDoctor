@@ -8,34 +8,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.NavType
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import androidx.compose.runtime.*
-import androidx.compose.material3.*
-import androidx.compose.foundation.layout.*
-
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
-import androidx.compose.material.icons.filled.ArrowBack
-
-
-
-
 
 @Composable
 fun DoctorProfileScreen(navController: NavController, userId: Int) {
@@ -46,8 +33,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        // Top Bar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -67,7 +52,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Profile Image
         Image(
             painter = painterResource(id = R.drawable.default_profile),
             contentDescription = "Doctor Profile",
@@ -78,7 +62,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 2x2 Grid of Feature Buttons
         Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -88,7 +71,7 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                     navController.navigate("doctor_full_profile/$userId")
                 }
                 FeatureCard("Appointments", R.drawable.ic_calendar) {
-                    navController.navigate("appointments_screen/$userId")
+                    navController.navigate("doctor_availability/$userId")
                 }
             }
 
@@ -104,19 +87,25 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 FeatureCard("Messages", R.drawable.ic_chat) {
                     navController.navigate("messages_screen/$userId")
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 FeatureCard("Edit Profile", R.drawable.ic_profile) {
                     navController.navigate("edit_doctor_profile/$userId")
                 }
                 FeatureCard("Availability", R.drawable.ic_calendar) {
                     navController.navigate("doctor_availability/$userId")
                 }
-
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Bottom Info Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -207,17 +196,17 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
             user = it
             name = it.name
             phone = it.phone
-            (it.experience ?: "").also { experience = it }
+            experience = it.experience ?: ""
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text("Edit Profile") }, navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                })
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            })
         }
     ) { padding ->
         Column(

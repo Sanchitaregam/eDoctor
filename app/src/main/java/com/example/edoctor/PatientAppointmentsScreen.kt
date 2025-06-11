@@ -1,6 +1,5 @@
 package com.example.edoctor
 
-
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +26,8 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int) {
     val appointmentDao = db.appointmentDao()
     val coroutineScope = rememberCoroutineScope()
 
-    var appointments by remember { mutableStateOf(listOf<AppointmentEntity>()) }
+    var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
+
     var patientName by remember { mutableStateOf(TextFieldValue()) }
     var date by remember { mutableStateOf(TextFieldValue()) }
     var time by remember { mutableStateOf(TextFieldValue()) }
@@ -51,10 +51,11 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int) {
             )
         }
     ) { padding ->
-        Column(modifier = Modifier
-            .padding(padding)
-            .padding(16.dp)) {
-
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .padding(16.dp)
+        ) {
             Text("Add Appointment", style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
