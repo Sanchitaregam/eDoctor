@@ -1,31 +1,29 @@
 package com.example.edoctor
 
-
-
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.edoctor.AvailabilityEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DoctorAvailabilityScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val db = remember { DatabaseProvider.getDatabase(context) }
-    val availabilityDao = db.availabilityDao() // <-- create this DAO/table
+    val availabilityDao = db.availabilityDao()
     val coroutineScope = rememberCoroutineScope()
 
     val allDays = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
@@ -39,7 +37,7 @@ fun DoctorAvailabilityScreen(navController: NavController, userId: Int) {
                 title = { Text("Set Availability") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -64,7 +62,8 @@ fun DoctorAvailabilityScreen(navController: NavController, userId: Int) {
                                 else selectedDays.add(day)
                             },
                             label = { Text(day) },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors()
                         )
                     }
                 }
@@ -84,22 +83,25 @@ fun DoctorAvailabilityScreen(navController: NavController, userId: Int) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Button(onClick = {
-                coroutineScope.launch {
-                    withContext(Dispatchers.IO) {
-                        availabilityDao.insertOrUpdate(
-                            AvailabilityEntity(
-                                doctorId = userId,
-                                days = selectedDays.joinToString(","),
-                                fromTime = fromTime,
-                                toTime = toTime
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        withContext(Dispatchers.IO) {
+                            availabilityDao.insertAvailability(
+                                AvailabilityEntity(
+                                    doctorId = userId,
+                                    days = selectedDays.joinToString(","),
+                                    fromTime = fromTime,
+                                    toTime = toTime
+                                )
                             )
-                        )
+                        }
+                        Toast.makeText(context, "Availability saved", Toast.LENGTH_SHORT).show()
+                        navController.popBackStack()
                     }
-                    Toast.makeText(context, "Availability saved", Toast.LENGTH_SHORT).show()
-                    navController.popBackStack()
-                }
-            }, modifier = Modifier.fillMaxWidth()) {
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text("Save Availability")
             }
         }

@@ -14,7 +14,8 @@ object DatabaseProvider {
                 AppDatabase::class.java,
                 "app_database"
             )
-                .fallbackToDestructiveMigration() // 🔥 Add this line to avoid crashes during schema changes
+                .fallbackToDestructiveMigration()
+                .allowMainThreadQueries() // ✅ For development only
                 .build()
             INSTANCE = instance
             instance

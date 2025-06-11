@@ -1,6 +1,4 @@
-
-
-package com.example.edoctor.data.entities
+package com.example.edoctor
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -9,7 +7,7 @@ import androidx.room.PrimaryKey
 data class AvailabilityEntity(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val doctorId: Int,
-    val day: String,
+    val days: String,
     val fromTime: String,
     val toTime: String
 )

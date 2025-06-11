@@ -16,5 +16,5 @@ data class UserEntity(
     var address: String? = null,
     var bloodGroup: String? = null,
     var emergencyContact: String? = null,
-    var experience: String? = null  // ✅ Moved here and marked as var
+    var experience: String? = null
 )

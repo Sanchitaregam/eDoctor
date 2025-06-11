@@ -1,15 +1,16 @@
 
 
-package com.example.edoctor.data.dao
+package com.example.edoctor.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import com.example.edoctor.data.entities.AvailabilityEntity
+import com.example.edoctor.AvailabilityEntity
 
 @Dao
 interface AvailabilityDao {
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAvailability(availability: AvailabilityEntity)
 
     @Query("SELECT * FROM availability WHERE doctorId = :doctorId")

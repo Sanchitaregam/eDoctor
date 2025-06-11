@@ -1,17 +1,21 @@
 package com.example.edoctor
 
+import android.os.Build
 import android.widget.CalendarView
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import java.time.LocalDate
 import java.util.*
 
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun CalendarScreen(onDateSelected: (LocalDate) -> Unit) {
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
