@@ -1,6 +1,5 @@
 package com.example.edoctor
 
-import androidx.navigation.NavHostController
 import androidx.room.*
 
 @Dao
@@ -16,8 +15,12 @@ interface UserDao {
     suspend fun login(email: String, password: String): UserEntity?
 
     @Query("SELECT * FROM users WHERE id = :userId")
-    suspend fun getUserById(userId: String): UserEntity?
+    suspend fun getUserById(userId: Int): UserEntity?
 
     @Update
     suspend fun updateUser(user: UserEntity)
+
+    @Query("SELECT * FROM users WHERE LOWER(role) = 'doctor'")
+    suspend fun getAllDoctors(): List<UserEntity>
+
 }

@@ -8,7 +8,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
@@ -20,7 +19,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientAppointmentsScreen(navController: NavController, doctorId: Int) {
+fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patientId: Int) {
     val context = LocalContext.current
     val db = remember { DatabaseProvider.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
@@ -33,10 +32,16 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int) {
     var time by remember { mutableStateOf(TextFieldValue()) }
     var notes by remember { mutableStateOf(TextFieldValue()) }
 
-    LaunchedEffect(doctorId) {
-        appointments = withContext(Dispatchers.IO) {
-            appointmentDao.getAppointmentsForDoctor(doctorId)
+    fun loadAppointments() {
+        coroutineScope.launch {
+            appointments = withContext(Dispatchers.IO) {
+                appointmentDao.getAppointmentsByDoctorAndPatient(doctorId, patientId) // <-- Corrected method name
+            }
         }
+    }
+
+    LaunchedEffect(doctorId, patientId) {
+        loadAppointments()
     }
 
     Scaffold(
@@ -88,15 +93,16 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int) {
                     coroutineScope.launch {
                         val newAppointment = AppointmentEntity(
                             doctorId = doctorId,
+                            patientId = patientId,
                             patientName = patientName.text,
                             date = date.text,
                             time = time.text,
                             notes = notes.text
                         )
                         withContext(Dispatchers.IO) {
-                            appointmentDao.addAppointment(newAppointment)
-                            appointments = appointmentDao.getAppointmentsForDoctor(doctorId)
+                            appointmentDao.insertAppointment(newAppointment)
                         }
+                        loadAppointments()
                         patientName = TextFieldValue()
                         date = TextFieldValue()
                         time = TextFieldValue()

@@ -190,7 +190,7 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
 
     LaunchedEffect(userId) {
         val fetchedUser = withContext(Dispatchers.IO) {
-            userDao.getUserById(userId.toString())
+            userDao.getUserById(userId)
         }
         fetchedUser?.let {
             user = it

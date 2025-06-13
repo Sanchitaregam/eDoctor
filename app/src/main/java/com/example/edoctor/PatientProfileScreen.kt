@@ -1,7 +1,6 @@
 package com.example.edoctor
 
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
@@ -11,7 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,21 +24,85 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import java.text.SimpleDateFormat
-import java.util.*
-import androidx.compose.material.icons.filled.Star
-
-
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun PatientProfileScreen(navController: NavController, userId: Int) {
+    val context = LocalContext.current
+    val userDao = AppDatabase.getDatabase(context).userDao()
+    Log.d("PatientProfile", "userId received: $userId")
+
+    var patient by remember { mutableStateOf<UserEntity?>(null) }
+    var doctors by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
     var searchQuery by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(userId) {
+        val loadedPatient: UserEntity?
+        val loadedDoctors: List<UserEntity>
+
+        withContext(Dispatchers.IO) {
+            loadedPatient = userDao.getUserById(userId)
+
+            if (userDao.getAllDoctors().isEmpty()) {
+                // Insert dummy doctors with fixed unique IDs > 1000 to avoid collision
+                userDao.insertUser(
+                    UserEntity(
+                        id = 1001,
+                        name = "Dr. Rohan Patel",
+                        role = "doctor",
+                        experience = "Cardiologist",
+                        rating = 4.5f,
+                        ratingCount = 10
+                    )
+                )
+                userDao.insertUser(
+                    UserEntity(
+                        id = 1002,
+                        name = "Dr. Anita Sharma",
+                        role = "doctor",
+                        experience = "Dermatologist",
+                        rating = 4.2f,
+                        ratingCount = 8
+                    )
+                )
+                userDao.insertUser(
+                    UserEntity(
+                        id = 1003,
+                        name = "Dr. Imran Khan",
+                        role = "doctor",
+                        experience = "Pediatrician",
+                        rating = 4.8f,
+                        ratingCount = 15
+                    )
+                )
+                userDao.insertUser(
+                    UserEntity(
+                        id = 1004,
+                        name = "Dr. Neha Verma",
+                        role = "doctor",
+                        experience = "Neurologist",
+                        rating = 4.6f,
+                        ratingCount = 12
+                    )
+                )
+            }
+
+            loadedDoctors = userDao.getAllDoctors()
+        }
+
+        patient = loadedPatient
+        doctors = loadedDoctors
+
+        Log.d("PatientProfile", "Patient: ${loadedPatient?.name}")
+        Log.d("PatientProfile", "Doctors count: ${loadedDoctors.size}")
+    }
+
+    val patientName = patient?.name ?: ""
     val specializations = listOf("Cardiologist", "Dermatologist", "Pediatrician", "Neurologist")
-    val doctors = listOf(
-        DoctorProfile("Dr. Smith", "Cardiologist", 4.5f),
-        DoctorProfile("Dr. Jane", "Dermatologist", 4.2f),
-        DoctorProfile("Dr. Ravi", "Pediatrician", 4.8f)
-    )
 
     Column(
         modifier = Modifier
@@ -46,6 +110,34 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             .background(Color(0xFFF7F7F7))
             .padding(16.dp)
     ) {
+        // Top Row: Welcome text + Logout button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "Welcome, $patientName",
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            IconButton(onClick = {
+                // Navigate back to login screen - assuming role is "patient"
+                navController.navigate("login/patient") {
+                    // Clear back stack so user can't press back to return here
+                    popUpTo(navController.graph.startDestinationId) {
+                        inclusive = true
+                    }
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Logout,
+                    contentDescription = "Logout"
+                )
+            }
+        }
+
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -62,7 +154,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
             specializations.forEach { spec ->
-                AssistChip(onClick = { /* Filter action */ }, label = { Text(spec) })
+                AssistChip(onClick = { searchQuery = spec }, label = { Text(spec) })
             }
         }
 
@@ -70,15 +162,15 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
 
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             doctors.filter {
-                it.name.contains(searchQuery, true) ||
-                        it.specialization.contains(searchQuery, true)
+                searchQuery.isBlank() || it.name.contains(searchQuery, ignoreCase = true) ||
+                        (it.experience?.contains(searchQuery, ignoreCase = true) ?: false)
             }.forEach { doctor ->
                 AnimatedVisibility(
                     visible = true,
                     enter = slideInHorizontally(initialOffsetX = { -200 }) + fadeIn()
                 ) {
-                    DoctorCard(doctor) {
-                        navController.navigate("book_appointment/${doctor.name}/$userId")
+                    DoctorCard(doctor = doctor) {
+                        navController.navigate("calendar/${doctor.id}/$userId/$patientName")
                     }
                 }
             }
@@ -86,18 +178,17 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
     }
 }
 
-data class DoctorProfile(val name: String, val specialization: String, val rating: Float)
-
 @Composable
-fun DoctorCard(doctor: DoctorProfile, onBookClick: () -> Unit) {
+fun DoctorCard(doctor: UserEntity, onBookClick: () -> Unit) {
+    var showRatingDialog by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
@@ -110,11 +201,14 @@ fun DoctorCard(doctor: DoctorProfile, onBookClick: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(doctor.name, fontWeight = FontWeight.Bold)
-                Text(doctor.specialization)
+                Text(doctor.experience ?: "No specialization listed")
                 Row {
                     repeat(doctor.rating.toInt()) {
                         Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700))
                     }
+                }
+                TextButton(onClick = { showRatingDialog = true }) {
+                    Text("Rate")
                 }
             }
             Button(onClick = onBookClick) {
@@ -122,75 +216,58 @@ fun DoctorCard(doctor: DoctorProfile, onBookClick: () -> Unit) {
             }
         }
     }
+
+    if (showRatingDialog) {
+        RatingDialog(doctor = doctor, onDismiss = { showRatingDialog = false })
+    }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookAppointmentScreen(navController: NavController, doctorId: Int, patientId: Int) {
+fun RatingDialog(doctor: UserEntity, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val calendar = Calendar.getInstance()
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-    val timeFormat = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    val userDao = remember { AppDatabase.getDatabase(context).userDao() }
+    var rating by remember { mutableStateOf(3f) }
+    val coroutineScope = rememberCoroutineScope()
 
-    var selectedDate by remember { mutableStateOf(dateFormat.format(calendar.time)) }
-    var selectedTime by remember { mutableStateOf(timeFormat.format(calendar.time)) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rate ${doctor.name}") },
+        text = {
+            Column {
+                Text("Select your rating:")
+                Slider(
+                    value = rating,
+                    onValueChange = { rating = it },
+                    valueRange = 1f..5f,
+                    steps = 3
+                )
+                Text("Rating: ${rating.toInt()}")
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                coroutineScope.launch {
+                    val newCount = doctor.ratingCount + 1
+                    val newRating = ((doctor.rating * doctor.ratingCount) + rating) / newCount
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Book Appointment") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    val updatedDoctor = doctor.copy(
+                        rating = newRating,
+                        ratingCount = newCount
+                    )
+
+                    withContext(Dispatchers.IO) {
+                        userDao.updateUser(updatedDoctor)
                     }
+                    onDismiss()
                 }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .background(Color(0xFFF7F7F7))
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Confirm Appointment", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("Doctor ID: $doctorId", fontSize = 16.sp)
-            Text("Patient ID: $patientId", fontSize = 16.sp)
-
-            Button(onClick = {
-                DatePickerDialog(context, { _, year, month, dayOfMonth ->
-                    calendar.set(Calendar.YEAR, year)
-                    calendar.set(Calendar.MONTH, month)
-                    calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                    selectedDate = dateFormat.format(calendar.time)
-                }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show()
             }) {
-                Text("Select Date: $selectedDate")
+                Text("Submit")
             }
-
-            Button(onClick = {
-                TimePickerDialog(context, { _, hourOfDay, minute ->
-                    calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-                    calendar.set(Calendar.MINUTE, minute)
-                    selectedTime = timeFormat.format(calendar.time)
-                }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false).show()
-            }) {
-                Text("Select Time: $selectedTime")
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Button(
-                onClick = {
-                    navController.popBackStack()
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Confirm Booking")
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
-    }
+    )
 }
