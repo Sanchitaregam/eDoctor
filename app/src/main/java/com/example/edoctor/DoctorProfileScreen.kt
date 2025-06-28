@@ -26,6 +26,18 @@ import kotlinx.coroutines.withContext
 
 @Composable
 fun DoctorProfileScreen(navController: NavController, userId: Int) {
+    val context = LocalContext.current
+    val db = remember { DatabaseProvider.getDatabase(context) }
+    val userDao = db.userDao()
+    var doctorName by remember { mutableStateOf("") }
+
+    LaunchedEffect(userId) {
+        val user = withContext(Dispatchers.IO) {
+            userDao.getUserById(userId)
+        }
+        doctorName = user?.name ?: ""
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -38,10 +50,10 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "Hi, Dr. John Doe", fontSize = 22.sp)
+            Text(text = "Hi, Dr. $doctorName", fontSize = 22.sp)
 
             Row {
-                IconButton(onClick = { /* Navigate to profile settings */ }) {
+                IconButton(onClick = { navController.navigate("edit_doctor_profile/$userId") }) {
                     Icon(Icons.Default.Person, contentDescription = "Profile")
                 }
                 IconButton(onClick = { /* Show notifications */ }) {
@@ -104,6 +116,20 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             }
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FeatureCard("Prescriptions", R.drawable.ic_file) {
+                navController.navigate("prescriptions_screen/$userId")
+            }
+            FeatureCard("Settings", R.drawable.ic_settings) {
+                navController.navigate("settings_screen/$userId")
+            }
+        }
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Card(
@@ -146,35 +172,6 @@ fun FeatureCard(title: String, iconResId: Int, onClick: () -> Unit) {
         }
     }
 }
-
-@Composable
-fun DoctorFullProfileScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Doctor Full Profile Screen")
-    }
-}
-
-@Composable
-fun AppointmentsScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Appointments Screen")
-    }
-}
-
-@Composable
-fun PatientsScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Patients Screen")
-    }
-}
-
-@Composable
-fun MessagesScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = "Messages Screen")
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
@@ -202,11 +199,14 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Edit Profile") }, navigationIcon = {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+            TopAppBar(
+                title = { Text("Edit Profile") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
                 }
-            })
+            )
         }
     ) { padding ->
         Column(
@@ -254,3 +254,4 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
         }
     }
 }
+

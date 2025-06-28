@@ -26,6 +26,10 @@ import androidx.navigation.navArgument
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -348,5 +352,3 @@ fun BookAppointmentScreen(
         }
     }
 }
-
-
