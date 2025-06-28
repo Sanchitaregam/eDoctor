@@ -43,6 +43,9 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
     LaunchedEffect(userId) {
         val loadedPatient: UserEntity?
         val loadedDoctors: List<UserEntity>
+        val existingDoctors = userDao.getAllDoctors()
+        Log.d("PatientProfile", "Existing doctors: ${existingDoctors.map { it.name }}")
+
 
         withContext(Dispatchers.IO) {
             loadedPatient = userDao.getUserById(userId)
@@ -100,6 +103,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
         Log.d("PatientProfile", "Patient: ${loadedPatient?.name}")
         Log.d("PatientProfile", "Doctors count: ${loadedDoctors.size}")
     }
+
 
     val patientName = patient?.name ?: ""
     val specializations = listOf("Cardiologist", "Dermatologist", "Pediatrician", "Neurologist")
