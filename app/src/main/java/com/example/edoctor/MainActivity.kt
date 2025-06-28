@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
                         composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
                         composable("admin_registration") { AdminRegistrationScreen(navController) }
 
+
                         composable(
                             "doctor_profile/{userId}",
                             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -96,6 +97,9 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
                             DoctorAvailabilityScreen(navController, doctorId)
+                        }
+                        composable("health_tips") {
+                            HealthTipsScreen(navController)
                         }
 
                         // ✅ Updated calendar route to pass doctorId and patientId
@@ -145,6 +149,7 @@ class MainActivity : ComponentActivity() {
                             PatientAppointmentsScreen(navController, doctorId, patientId)
                         }
                     }
+
                 }
             }
         }
@@ -296,6 +301,7 @@ fun RegisterRoleScreen(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun BookAppointmentScreen(
     navController: NavController,
@@ -352,3 +358,10 @@ fun BookAppointmentScreen(
         }
     }
 }
+
+
+
+
+
+
+

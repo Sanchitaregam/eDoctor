@@ -8,7 +8,7 @@ import com.example.edoctor.dao.AvailabilityDao
 import com.example.edoctor.AppointmentDao
 import com.example.edoctor.UserDao
 @Database(
-    entities = [UserEntity::class, AppointmentEntity::class, AvailabilityEntity::class],
+    entities = [UserEntity::class, AppointmentEntity::class, AvailabilityEntity::class, HealthTipEntity::class],
     version = 1, // 🔼 increase the version number
     exportSchema = false
 )
@@ -16,6 +16,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun availabilityDao(): AvailabilityDao
     abstract fun userDao(): UserDao
     abstract fun appointmentDao(): AppointmentDao
+    abstract fun healthTipDao(): HealthTipDao
+
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
