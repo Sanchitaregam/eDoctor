@@ -56,4 +56,8 @@ class SessionManager(context: Context) {
             else -> "welcome"
         }
     }
+
+    fun getCurrentUserId(): Int {
+        return sharedPreferences.getInt(KEY_USER_ID, -1)
+    }
 } 

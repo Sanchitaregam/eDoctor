@@ -120,12 +120,12 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            FeatureCard("Health Tips", R.drawable.ic_file) { // use existing icon or create new
-                navController.navigate("health_tips_screen")
+            FeatureCard("Health Tips", R.drawable.ic_file) {
+                navController.navigate("health_tips")
             }
 
             FeatureCard("Settings", R.drawable.ic_settings) {
-                navController.navigate("settings_screen/$userId")
+                navController.navigate("settings")
             }
         }
 

@@ -162,6 +162,13 @@ class MainActivity : ComponentActivity() {
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             ChangePasswordScreen(navController, userId)
                         }
+                        composable("change_email") {
+                            val context = LocalContext.current
+                            val sessionManager = remember { SessionManager(context) }
+                            val userId = sessionManager.getCurrentUserId()
+                            ChangeEmailScreen(navController, userId)
+                        }
+                        composable("settings") { SettingsScreen(navController) }
                     }
                 }
             }

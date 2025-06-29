@@ -13,13 +13,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import kotlinx.coroutines.launch
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.graphics.Color
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController, userId: Int) {
+fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
     val sessionManager = remember { SessionManager(context) }
-    var showAboutDialog by remember { mutableStateOf(false) }
+    val userId = sessionManager.getCurrentUserId()
+    val db = remember { DatabaseProvider.getDatabase(context) }
+    val userDao = db.userDao()
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -50,11 +56,11 @@ fun SettingsScreen(navController: NavController, userId: Int) {
             }
 
             Button(
-                onClick = { showAboutDialog = true },
+                onClick = { navController.navigate("change_email") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("About App")
+                Text("Change Email")
             }
 
             Button(
@@ -88,18 +94,5 @@ fun SettingsScreen(navController: NavController, userId: Int) {
                 Text("Logout")
             }
         }
-    }
-
-    if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) {
-                    Text("OK")
-                }
-            },
-            title = { Text("About eDoctor") },
-            text = { Text("eDoctor v1.0\nDeveloped by Sanchita Regami and Anil Banstola.\nFor smart health anytime, anywhere.") }
-        )
     }
 }

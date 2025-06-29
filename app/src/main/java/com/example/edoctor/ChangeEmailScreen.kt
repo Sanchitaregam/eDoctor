@@ -8,26 +8,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChangePasswordScreen(navController: NavController, userId: Int) {
+fun ChangeEmailScreen(navController: NavController, userId: Int) {
     val db = DatabaseProvider.getDatabase(LocalContext.current)
     val userDao = db.userDao()
     val coroutineScope = rememberCoroutineScope()
 
-    var newPassword by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+    var newEmail by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Change Password") },
+                title = { Text("Change Email") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -44,45 +44,43 @@ fun ChangePasswordScreen(navController: NavController, userId: Int) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
-                value = newPassword,
-                onValueChange = { newPassword = it },
-                label = { Text("New Password") },
+                value = newEmail,
+                onValueChange = { newEmail = it },
+                label = { Text("New Email") },
                 modifier = Modifier.fillMaxWidth()
             )
-
             OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { confirmPassword = it },
-                label = { Text("Confirm New Password") },
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Current Password") },
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
-
             Button(
                 onClick = {
                     coroutineScope.launch {
+                        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(newEmail).matches()) {
+                            message = "Invalid email address."
+                            return@launch
+                        }
                         val user = userDao.getUserById(userId)
-                        if (user != null) {
-                            if (newPassword == confirmPassword && newPassword.length >= 6) {
-                                user.password = newPassword
-                                userDao.updateUser(user)
-                                message = "Password updated successfully."
-                            } else {
-                                message = "New passwords do not match or are too short."
-                            }
+                        if (user != null && user.password == password) {
+                            user.email = newEmail
+                            userDao.updateUser(user)
+                            message = "Email updated successfully."
                         } else {
-                            message = "User not found."
+                            message = "Incorrect password."
                         }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Update Password")
+                Text("Update Email")
             }
-
             if (message.isNotEmpty()) {
                 Text(text = message, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
-}
+} 
