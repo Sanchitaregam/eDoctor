@@ -35,7 +35,7 @@ fun savePatientToDatabase(
     role: String = "patient",
     onResult: (Boolean) -> Unit
 ) {
-    val db = DatabaseProvider.getDatabase(context)
+    val db = AppDatabase.getDatabase(context)
     val userDao = db.userDao()
     val user = UserEntity(0, name, email, phone, password, gender, role)
 

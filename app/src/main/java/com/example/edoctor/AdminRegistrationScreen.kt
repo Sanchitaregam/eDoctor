@@ -27,7 +27,7 @@ fun saveAdminToDatabase(
     role: String,
     onResult: (Boolean) -> Unit
 ) {
-    val db = DatabaseProvider.getDatabase(context) // ✅ Singleton instance
+    val db = AppDatabase.getDatabase(context) // ✅ Singleton instance
     val userDao = db.userDao()
     val user = UserEntity(0, name, email, phone, password, gender, role)
 

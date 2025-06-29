@@ -85,7 +85,7 @@ fun LoginScreen(navController: NavController, role: String) {
                             errorMessage = "All fields are required"
                         } else {
                             coroutineScope.launch {
-                                val user = DatabaseHandler
+                                val user = AppDatabase
                                     .getDatabase(context)
                                     .userDao()
                                     .login(email, password)

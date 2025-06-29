@@ -23,4 +23,7 @@ interface UserDao {
     @Query("SELECT * FROM users WHERE LOWER(role) = 'doctor'")
     suspend fun getAllDoctors(): List<UserEntity>
 
+    @Query("SELECT * FROM users")
+    suspend fun getAllUsers(): List<UserEntity>
+
 }

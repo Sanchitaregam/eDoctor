@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -29,15 +30,63 @@ import kotlinx.coroutines.withContext
 @Composable
 fun DoctorProfileScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
-    val db = remember { DatabaseProvider.getDatabase(context) }
+    val db = remember { AppDatabase.getDatabase(context) }
     val userDao = db.userDao()
+    val sessionManager = remember { SessionManager(context) }
     var doctorName by remember { mutableStateOf("") }
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var doctorInfo by remember { mutableStateOf<UserEntity?>(null) }
 
-    LaunchedEffect(userId) {
-        val user = withContext(Dispatchers.IO) {
-            userDao.getUserById(userId)
+    // Get current logged-in user ID from session
+    val currentUserId = sessionManager.getCurrentUserId()
+    val isLoggedIn = sessionManager.isLoggedIn()
+    android.util.Log.d("DoctorProfile", "Current logged-in User ID: $currentUserId")
+    android.util.Log.d("DoctorProfile", "Is logged in: $isLoggedIn")
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId > 0 && isLoggedIn) {
+            android.util.Log.d("DoctorProfile", "Loading data for current user: $currentUserId")
+            val user = withContext(Dispatchers.IO) {
+                userDao.getUserById(currentUserId)
+            }
+            doctorName = user?.name ?: ""
+            doctorInfo = user
+            android.util.Log.d("DoctorProfile", "Loaded user: $user")
+            android.util.Log.d("DoctorProfile", "Doctor name: $doctorName")
+        } else {
+            android.util.Log.d("DoctorProfile", "No user logged in or invalid user ID")
         }
-        doctorName = user?.name ?: ""
+    }
+
+    // Always reload data when dialog is opened
+    LaunchedEffect(showProfileDialog) {
+        if (showProfileDialog) {
+            val userId = sessionManager.getCurrentUserId()
+            val loggedIn = sessionManager.isLoggedIn()
+            android.util.Log.d("DoctorProfile", "Dialog opened - User ID: $userId, Logged in: $loggedIn")
+            
+            if (userId > 0 && loggedIn) {
+                val user = withContext(Dispatchers.IO) {
+                    userDao.getUserById(userId)
+                }
+                doctorInfo = user
+                android.util.Log.d("DoctorProfile", "Dialog - Loaded user: $user")
+                
+                // Debug: Check all users in database
+                val allUsers = withContext(Dispatchers.IO) {
+                    userDao.getAllUsers()
+                }
+                android.util.Log.d("DoctorProfile", "All users in database: $allUsers")
+                
+                // Debug: Check all doctors specifically
+                val allDoctors = withContext(Dispatchers.IO) {
+                    userDao.getAllDoctors()
+                }
+                android.util.Log.d("DoctorProfile", "All doctors in database: $allDoctors")
+            } else {
+                android.util.Log.d("DoctorProfile", "Dialog - No user logged in or invalid user ID")
+            }
+        }
     }
 
     Column(
@@ -55,13 +104,65 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             Text(text = "Hi, Dr. $doctorName", fontSize = 22.sp)
 
             Row {
-                IconButton(onClick = { navController.navigate("edit_doctor_profile/$userId") }) {
+                IconButton(onClick = { showProfileDialog = true }) {
                     Icon(Icons.Default.Person, contentDescription = "Profile")
                 }
                 IconButton(onClick = { /* Show notifications */ }) {
                     Icon(Icons.Default.Notifications, contentDescription = "Notifications")
                 }
             }
+        }
+
+        // Profile Dialog
+        if (showProfileDialog) {
+            AlertDialog(
+                onDismissRequest = { showProfileDialog = false },
+                title = { Text("Profile Information") },
+                text = {
+                    Column {
+                        if (doctorInfo != null) {
+                            ProfileInfoRow("Name", doctorInfo!!.name.ifEmpty { "Not set" })
+                            ProfileInfoRow("Email", doctorInfo!!.email.ifEmpty { "Not set" })
+                            ProfileInfoRow("Phone", doctorInfo!!.phone.ifEmpty { "Not set" })
+                            ProfileInfoRow("Experience", "${doctorInfo!!.experience ?: "0"} years")
+                            ProfileInfoRow("Specialization", doctorInfo!!.specialization ?: "Not specified")
+                        } else {
+                            Text(
+                                "Profile data not found in database.\n\nThis may happen if the database was reset or the user account was deleted.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Please log in again to refresh your session.",
+                                style = MaterialTheme.typography.bodySmall,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showProfileDialog = false }) {
+                        Text("Close")
+                    }
+                },
+                dismissButton = {
+                    if (doctorInfo == null) {
+                        TextButton(
+                            onClick = { 
+                                sessionManager.clearLoginSession()
+                                showProfileDialog = false
+                                navController.navigate("welcome") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        ) {
+                            Text("Logout")
+                        }
+                    }
+                }
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -82,10 +183,10 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 FeatureCard("Patients", R.drawable.ic_stethoscope) {
-                    navController.navigate("patients_screen/$userId")
+                    navController.navigate("patients_screen/$currentUserId")
                 }
                 FeatureCard("Messages", R.drawable.ic_chat) {
-                    navController.navigate("messages_screen/$userId")
+                    navController.navigate("messages_screen/$currentUserId")
                 }
             }
 
@@ -96,7 +197,7 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 FeatureCard("Availability", R.drawable.ic_calendar) {
-                    navController.navigate("doctor_availability/$userId")
+                    navController.navigate("doctor_availability/$currentUserId")
                 }
             }
         }
@@ -158,11 +259,12 @@ fun FeatureCard(title: String, iconResId: Int, onClick: () -> Unit) {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
-    val db = remember { DatabaseProvider.getDatabase(context) }
+    val db = remember { AppDatabase.getDatabase(context) }
     val userDao = db.userDao()
     val coroutineScope = rememberCoroutineScope()
 
@@ -170,6 +272,7 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var experience by remember { mutableStateOf(0) }
+    var specialization by remember { mutableStateOf("") }
 
     LaunchedEffect(userId) {
         val fetchedUser = withContext(Dispatchers.IO) {
@@ -180,6 +283,7 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
             name = it.name
             phone = it.phone
             experience = it.experience?.toIntOrNull() ?: 0
+            specialization = it.specialization ?: ""
         }
     }
 
@@ -215,6 +319,12 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
+                value = specialization,
+                onValueChange = { specialization = it },
+                label = { Text("Specialization") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
                 value = experience.toString(),
                 onValueChange = { newValue ->
                     val filtered = newValue.filter { it.isDigit() }
@@ -245,7 +355,12 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
                 onClick = {
                     coroutineScope.launch {
                         user?.let {
-                            val updated = it.copy(name = name, phone = phone, experience = experience.toString())
+                            val updated = it.copy(
+                                name = name,
+                                phone = phone,
+                                experience = experience.toString(),
+                                specialization = specialization
+                            )
                             withContext(Dispatchers.IO) {
                                 userDao.updateUser(updated)
                             }
@@ -258,6 +373,26 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
                 Text("Save Changes")
             }
         }
+    }
+}
+
+@Composable
+fun ProfileInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
