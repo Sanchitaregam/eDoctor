@@ -48,11 +48,11 @@ fun SettingsScreen(navController: NavController) {
         ) {
 
             Button(
-                onClick = { navController.navigate("change_password/$userId") },
+                onClick = { navController.navigate("edit_doctor_profile/$userId") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Change Password")
+                Text("Edit Profile")
             }
 
             Button(
@@ -64,17 +64,11 @@ fun SettingsScreen(navController: NavController) {
             }
 
             Button(
-                onClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:yourdevemail@example.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "eDoctor App Support")
-                    }
-                    context.startActivity(intent)
-                },
+                onClick = { navController.navigate("change_password/$userId") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Contact Support")
+                Text("Change Password")
             }
 
             Button(

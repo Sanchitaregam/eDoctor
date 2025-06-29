@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -105,9 +107,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                FeatureCard("Edit Profile", R.drawable.ic_profile) {
-                    navController.navigate("edit_doctor_profile/$userId")
-                }
                 FeatureCard("Availability", R.drawable.ic_calendar) {
                     navController.navigate("doctor_availability/$userId")
                 }
@@ -182,7 +181,7 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
     var user by remember { mutableStateOf<UserEntity?>(null) }
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var experience by remember { mutableStateOf("") }
+    var experience by remember { mutableStateOf(0) }
 
     LaunchedEffect(userId) {
         val fetchedUser = withContext(Dispatchers.IO) {
@@ -192,7 +191,7 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
             user = it
             name = it.name
             phone = it.phone
-            experience = it.experience ?: ""
+            experience = it.experience?.toIntOrNull() ?: 0
         }
     }
 
@@ -228,17 +227,37 @@ fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
                 modifier = Modifier.fillMaxWidth()
             )
             OutlinedTextField(
-                value = experience,
-                onValueChange = { experience = it },
-                label = { Text("Experience (e.g. 10 years)") },
-                modifier = Modifier.fillMaxWidth()
+                value = experience.toString(),
+                onValueChange = { newValue ->
+                    val filtered = newValue.filter { it.isDigit() }
+                    experience = filtered.toIntOrNull() ?: 0
+                },
+                label = { Text("Experience (years)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                trailingIcon = {
+                    Row {
+                        IconButton(
+                            onClick = { if (experience > 0) experience-- },
+                            enabled = experience > 0
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Decrease")
+                        }
+                        IconButton(
+                            onClick = { if (experience < 60) experience++ },
+                            enabled = experience < 60
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Increase")
+                        }
+                    }
+                }
             )
 
             Button(
                 onClick = {
                     coroutineScope.launch {
                         user?.let {
-                            val updated = it.copy(name = name, phone = phone, experience = experience)
+                            val updated = it.copy(name = name, phone = phone, experience = experience.toString())
                             withContext(Dispatchers.IO) {
                                 userDao.updateUser(updated)
                             }
