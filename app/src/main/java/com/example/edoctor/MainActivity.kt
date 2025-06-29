@@ -26,6 +26,9 @@ import androidx.navigation.navArgument
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -169,6 +172,22 @@ class MainActivity : ComponentActivity() {
                             ChangeEmailScreen(navController, userId)
                         }
                         composable("settings") { SettingsScreen(navController) }
+                        
+                        composable(
+                            "patients_screen/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            PatientsScreen(navController, userId)
+                        }
+                        
+                        composable(
+                            "messages_screen/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            MessagesScreen(navController, userId)
+                        }
                     }
                 }
             }
@@ -375,6 +394,84 @@ fun BookAppointmentScreen(
             }) {
                 Text("Confirm Booking")
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PatientsScreen(navController: NavController, userId: Int) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Patients") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Patients Screen",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "This feature is coming soon!",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MessagesScreen(navController: NavController, userId: Int) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Messages") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "Messages Screen",
+                style = MaterialTheme.typography.headlineMedium,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "This feature is coming soon!",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
