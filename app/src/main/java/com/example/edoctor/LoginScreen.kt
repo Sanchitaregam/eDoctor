@@ -25,6 +25,7 @@ fun LoginScreen(navController: NavController, role: String) {
     var errorMessage by remember { mutableStateOf("") }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val sessionManager = remember { SessionManager(context) }
 
     val title = when (role.lowercase()) {
         "doctor" -> "Doctor Login"
@@ -90,11 +91,15 @@ fun LoginScreen(navController: NavController, role: String) {
                                     .login(email, password)
 
                                 if (user != null && user.role.equals(role, ignoreCase = true)) {
+                                    // Save login session
+                                    sessionManager.saveLoginSession(user.id, user.role, user.email)
+                                    
                                     Toast.makeText(
                                         context,
                                         "Login Successful",
                                         Toast.LENGTH_SHORT
                                     ).show()
+                                    
                                     when (user.role.lowercase()) {
                                         "doctor" -> navController.navigate("doctor_profile/${user.id}")
                                         "patient" -> navController.navigate("patient_profile/${user.id}")

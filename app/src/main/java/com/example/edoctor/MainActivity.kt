@@ -26,19 +26,27 @@ import androidx.navigation.navArgument
 import com.example.edoctor.ui.theme.EDoctorTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.graphics.Color
-
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             EDoctorTheme {
+                val context = LocalContext.current
+                val sessionManager = remember { SessionManager(context) }
                 val navController = rememberNavController()
+                
+                // Determine starting destination based on login status
+                val startDestination = remember {
+                    if (sessionManager.isLoggedIn()) {
+                        sessionManager.getLoginDestination()
+                    } else {
+                        "welcome"
+                    }
+                }
+                
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    NavHost(navController = navController, startDestination = "welcome") {
+                    NavHost(navController = navController, startDestination = startDestination) {
                         composable("welcome") { WelcomeScreen(navController) }
                         composable("register") { RegisterRoleScreen(navController) }
                         composable("select_login_role") { LoginRoleScreen(navController) }
@@ -49,7 +57,6 @@ class MainActivity : ComponentActivity() {
                         composable("patient_registration") { PatientRegistrationScreen(navController) }
                         composable("doctor_registration") { EnhancedDoctorRegistrationScreen(navController) }
                         composable("admin_registration") { AdminRegistrationScreen(navController) }
-
 
                         composable(
                             "doctor_profile/{userId}",
@@ -148,8 +155,14 @@ class MainActivity : ComponentActivity() {
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             PatientAppointmentsScreen(navController, doctorId, patientId)
                         }
+                        composable(
+                            "change_password/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            ChangePasswordScreen(navController, userId)
+                        }
                     }
-
                 }
             }
         }

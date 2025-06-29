@@ -9,7 +9,7 @@ import com.example.edoctor.AppointmentDao
 import com.example.edoctor.UserDao
 @Database(
     entities = [UserEntity::class, AppointmentEntity::class, AvailabilityEntity::class, HealthTipEntity::class],
-    version = 1, // 🔼 increase the version number
+    version = 2, // 🔼 increase the version number
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
