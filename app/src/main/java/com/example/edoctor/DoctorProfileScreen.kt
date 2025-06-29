@@ -81,18 +81,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-
-                FeatureCard("Appointments", R.drawable.ic_calendar) {
-                    navController.navigate("doctor_availability/$userId")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
                 FeatureCard("Patients", R.drawable.ic_stethoscope) {
                     navController.navigate("patients_screen/$userId")
                 }
