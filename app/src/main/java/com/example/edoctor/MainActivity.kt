@@ -66,10 +66,14 @@ import com.example.edoctor.utils.SessionManager
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.AdminDao
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.dao.AppointmentDao
 import com.example.edoctor.data.dao.AvailabilityDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.data.entities.AvailabilityEntity
 
@@ -142,7 +146,7 @@ class MainActivity : ComponentActivity() {
                             val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
                             DoctorAvailabilityScreen(navController, doctorId)
                         }
-                        
+
                         // ✅ Updated calendar route to pass doctorId and patientId
                         composable(
                             "calendar/{doctorId}/{patientId}/{patientName}",
@@ -183,9 +187,8 @@ class MainActivity : ComponentActivity() {
                                 navArgument("patientId") { type = NavType.IntType }
                             )
                         ) { backStackEntry ->
-                            val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
-                            PatientAppointmentsScreen(navController, doctorId, patientId)
+                            PatientAppointmentsScreen(navController, patientId)
                         }
                         
                         composable(
@@ -216,10 +219,7 @@ class MainActivity : ComponentActivity() {
                             ChangePasswordScreen(navController, userId)
                         }
                         composable("change_email") {
-                            val context = LocalContext.current
-                            val sessionManager = remember { SessionManager(context) }
-                            val userId = sessionManager.getCurrentUserId()
-                            ChangeEmailScreen(navController, userId)
+                            ChangeEmailScreen(navController)
                         }
                         composable("settings") { SettingsScreen(navController) }
                         
@@ -405,18 +405,18 @@ fun BookAppointmentScreen(
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
-    val userDao = db.userDao()
+    val doctorDao = db.doctorDao()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    var doctor by remember { mutableStateOf<UserEntity?>(null) }
+    var doctor by remember { mutableStateOf<DoctorEntity?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
     // Load doctor information
     LaunchedEffect(doctorId) {
         try {
             doctor = withContext(Dispatchers.IO) {
-                userDao.getUserById(doctorId)
+                doctorDao.getDoctorById(doctorId)
             }
         } catch (e: Exception) {
             doctor = null
@@ -446,21 +446,22 @@ fun BookAppointmentScreen(
                 doctor?.specialization?.let { specialization ->
                     Text("Specialization: $specialization")
                 }
-                Text("Patient Name: $patientName")
-                Text("Appointment Date: $date")
-                Text("Time: $time")
-                Spacer(Modifier.height(24.dp))
+            Text("Patient Name: $patientName")
+            Text("Appointment Date: $date")
+            Text("Time: $time")
+            Spacer(Modifier.height(24.dp))
 
-                Button(onClick = {
-                    coroutineScope.launch {
-                        val appointment = AppointmentEntity(
-                            doctorId = doctorId,
-                            patientId = patientId,
-                            patientName = patientName,
-                            date = date,
-                            time = time
-                        )
-                        appointmentDao.insertAppointment(appointment)
+            Button(onClick = {
+                coroutineScope.launch {
+                    val appointment = AppointmentEntity(
+                        doctorId = doctorId,
+                        patientId = patientId,
+                        patientName = patientName,
+                            doctorName = doctor?.name ?: "Unknown Doctor",
+                        date = date,
+                        time = time
+                    )
+                    appointmentDao.insertAppointment(appointment)
 
                         // Navigate immediately without any snackbar delay
                         try {
@@ -474,12 +475,12 @@ fun BookAppointmentScreen(
                         }
                         
                         // Show snackbar after navigation (optional)
-                        snackbarHostState.showSnackbar("Appointment booked successfully")
+                    snackbarHostState.showSnackbar("Appointment booked successfully")
                     }
-                }) {
-                    Text("Confirm Booking")
-                }
+            }) {
+                Text("Confirm Booking")
             }
+        }
         }
     }
 }
@@ -529,7 +530,6 @@ fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
-    val userDao = db.userDao()
     
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -577,9 +577,9 @@ fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
             }
         } else if (appointments.isEmpty()) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
                     .padding(32.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally

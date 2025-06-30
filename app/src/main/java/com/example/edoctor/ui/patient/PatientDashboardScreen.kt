@@ -36,9 +36,9 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
@@ -51,23 +51,23 @@ import com.example.edoctor.ui.common.PatientAppointmentCard
 @Composable
 fun PatientDashboardScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
-    val userDao = AppDatabase.getDatabase(context).userDao()
+    val patientDao = AppDatabase.getDatabase(context).patientDao()
     val appointmentDao = AppDatabase.getDatabase(context).appointmentDao()
     val sessionManager = remember { SessionManager(context) }
     
-    var patient by remember { mutableStateOf<UserEntity?>(null) }
+    var patient by remember { mutableStateOf<PatientEntity?>(null) }
     var bookedAppointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
     var totalAppointmentCount by remember { mutableStateOf(0) }
     var showProfileDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showSearchResults by remember { mutableStateOf(false) }
-    var searchResults by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+    var searchResults by remember { mutableStateOf<List<PatientEntity>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         val currentUserId = sessionManager.getCurrentUserId()
         if (currentUserId != -1) {
             val loadedPatient = withContext(Dispatchers.IO) {
-                userDao.getUserById(currentUserId)
+                patientDao.getPatientById(currentUserId)
             }
             patient = loadedPatient
             

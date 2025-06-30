@@ -12,24 +12,34 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.AdminDao
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.utils.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(navController: NavController, userId: Int) {
-    val context = LocalContext.current
-    val sessionManager = remember { SessionManager(context) }
-    val db = AppDatabase.getDatabase(LocalContext.current)
-    val userDao = db.userDao()
-    val coroutineScope = rememberCoroutineScope()
-
+    var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+    var successMessage by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val adminDao = db.adminDao()
+    val doctorDao = db.doctorDao()
+    val patientDao = db.patientDao()
+    val sessionManager = remember { SessionManager(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -51,6 +61,14 @@ fun ChangePasswordScreen(navController: NavController, userId: Int) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
+                value = currentPassword,
+                onValueChange = { currentPassword = it },
+                label = { Text("Current Password") },
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation()
+            )
+
+            OutlinedTextField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
                 label = { Text("New Password") },
@@ -69,17 +87,65 @@ fun ChangePasswordScreen(navController: NavController, userId: Int) {
             Button(
                 onClick = {
                     coroutineScope.launch {
-                        val user = userDao.getUserById(userId)
+                        val currentUserId = sessionManager.getCurrentUserId()
+                        val userRole = sessionManager.getCurrentUserRole()
+                        
+                        if (currentUserId != -1 && userRole != null) {
+                            val user = withContext(Dispatchers.IO) {
+                                when (userRole.lowercase()) {
+                                    "admin" -> adminDao.getAdminById(currentUserId)
+                                    "doctor" -> doctorDao.getDoctorById(currentUserId)
+                                    "patient" -> patientDao.getPatientById(currentUserId)
+                                    else -> null
+                                }
+                            }
+                            
                         if (user != null) {
+                                // Verify current password
+                                val isValidPassword = when (user) {
+                                    is AdminEntity -> user.password == currentPassword
+                                    is DoctorEntity -> user.password == currentPassword
+                                    is PatientEntity -> user.password == currentPassword
+                                    else -> false
+                                }
+                                
+                                if (isValidPassword) {
                             if (newPassword == confirmPassword && newPassword.length >= 6) {
-                                user.password = newPassword
-                                userDao.updateUser(user)
-                                message = "Password updated successfully."
+                                        // Update password
+                                        val updatedUser = when (user) {
+                                            is AdminEntity -> user.copy(password = newPassword)
+                                            is DoctorEntity -> user.copy(password = newPassword)
+                                            is PatientEntity -> user.copy(password = newPassword)
+                                            else -> user
+                                        }
+                                        
+                                        withContext(Dispatchers.IO) {
+                                            when (updatedUser) {
+                                                is AdminEntity -> adminDao.updateAdmin(updatedUser)
+                                                is DoctorEntity -> doctorDao.updateDoctor(updatedUser)
+                                                is PatientEntity -> patientDao.updatePatient(updatedUser)
+                                            }
+                                        }
+                                        successMessage = "Password updated successfully"
+                                        errorMessage = ""
+                                        currentPassword = ""
+                                        newPassword = ""
+                                        confirmPassword = ""
+                                    } else {
+                                        errorMessage = "New passwords do not match or are too short (minimum 6 characters)"
+                                        successMessage = ""
+                                    }
+                                } else {
+                                    errorMessage = "Current password is incorrect"
+                                    successMessage = ""
+                                }
                             } else {
-                                message = "New passwords do not match or are too short."
+                                errorMessage = "User not found"
+                                successMessage = ""
                             }
                         } else {
-                            message = "User not found."
+                            errorMessage = "Session error. Please login again."
+                            successMessage = ""
                         }
                     }
                 },
@@ -89,8 +155,20 @@ fun ChangePasswordScreen(navController: NavController, userId: Int) {
                 Text("Update Password")
             }
 
-            if (message.isNotEmpty()) {
-                Text(text = message, color = MaterialTheme.colorScheme.primary)
+            if (errorMessage.isNotEmpty()) {
+                Text(
+                    text = errorMessage, 
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            
+            if (successMessage.isNotEmpty()) {
+                Text(
+                    text = successMessage, 
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

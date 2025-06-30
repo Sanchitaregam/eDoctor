@@ -9,6 +9,7 @@ data class AppointmentEntity(
     val doctorId: Int,
     val patientId: Int,
     val patientName: String,
+    val doctorName: String,
     val date: String,
     val time: String,
     val notes: String? = null  // <- this is the correct way

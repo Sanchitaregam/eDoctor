@@ -28,8 +28,12 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.dao.AdminDao
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.utils.SessionManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,14 +104,47 @@ fun LoginScreen(navController: NavController, role: String) {
                             errorMessage = "All fields are required"
                         } else {
                             coroutineScope.launch {
-                                val user = AppDatabase
-                                    .getDatabase(context)
-                                    .userDao()
-                                    .login(email, password)
+                                val db = AppDatabase.getDatabase(context)
+                                var user: Any? = null
+                                var userId = 0
+                                var userEmail = ""
 
-                                if (user != null && user.role.equals(role, ignoreCase = true)) {
+                                when (role.lowercase()) {
+                                    "admin" -> {
+                                        val admin = withContext(Dispatchers.IO) {
+                                            db.adminDao().loginAdmin(email, password)
+                                        }
+                                        if (admin != null) {
+                                            user = admin
+                                            userId = admin.id
+                                            userEmail = admin.email
+                                        }
+                                    }
+                                    "doctor" -> {
+                                        val doctor = withContext(Dispatchers.IO) {
+                                            db.doctorDao().loginDoctor(email, password)
+                                        }
+                                        if (doctor != null) {
+                                            user = doctor
+                                            userId = doctor.id
+                                            userEmail = doctor.email
+                                        }
+                                    }
+                                    "patient" -> {
+                                        val patient = withContext(Dispatchers.IO) {
+                                            db.patientDao().loginPatient(email, password)
+                                        }
+                                        if (patient != null) {
+                                            user = patient
+                                            userId = patient.id
+                                            userEmail = patient.email
+                                        }
+                                    }
+                                }
+
+                                if (user != null) {
                                     // Save login session
-                                    sessionManager.saveLoginSession(user.id, user.role, user.email)
+                                    sessionManager.saveLoginSession(userId, role, userEmail)
                                     
                                     Toast.makeText(
                                         context,
@@ -115,14 +152,14 @@ fun LoginScreen(navController: NavController, role: String) {
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     
-                                    when (user.role.lowercase()) {
-                                        "doctor" -> navController.navigate("doctor_profile/${user.id}")
-                                        "patient" -> navController.navigate("patient_profile/${user.id}")
-                                        "admin" -> navController.navigate("admin_profile/${user.id}")
+                                    when (role.lowercase()) {
+                                        "doctor" -> navController.navigate("doctor_profile/$userId")
+                                        "patient" -> navController.navigate("patient_profile/$userId")
+                                        "admin" -> navController.navigate("admin_profile/$userId")
                                         else -> errorMessage = "Unknown role"
                                     }
                                 } else {
-                                    errorMessage = "Invalid credentials or wrong role"
+                                    errorMessage = "Invalid credentials"
                                 }
                             }
                         }

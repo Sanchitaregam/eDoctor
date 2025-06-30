@@ -34,9 +34,9 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.DoctorDao
 import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.DoctorEntity
 import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
@@ -50,12 +50,12 @@ import com.example.edoctor.ui.common.ProfileInfoRow
 fun DoctorDashboardScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
+    val doctorDao = db.doctorDao()
     val appointmentDao = db.appointmentDao()
     val sessionManager = remember { SessionManager(context) }
     var doctorName by remember { mutableStateOf("") }
     var showProfileDialog by remember { mutableStateOf(false) }
-    var doctorInfo by remember { mutableStateOf<UserEntity?>(null) }
+    var doctorInfo by remember { mutableStateOf<DoctorEntity?>(null) }
     var upcomingAppointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
 
     // Get current logged-in user ID from session
@@ -65,7 +65,7 @@ fun DoctorDashboardScreen(navController: NavController, userId: Int) {
     LaunchedEffect(currentUserId) {
         if (currentUserId > 0 && isLoggedIn) {
             val user = withContext(Dispatchers.IO) {
-                userDao.getUserById(currentUserId)
+                doctorDao.getDoctorById(currentUserId)
             }
             doctorName = user?.name ?: ""
             doctorInfo = user
@@ -86,7 +86,7 @@ fun DoctorDashboardScreen(navController: NavController, userId: Int) {
             
             if (userId > 0 && loggedIn) {
                 val user = withContext(Dispatchers.IO) {
-                    userDao.getUserById(userId)
+                    doctorDao.getDoctorById(userId)
                 }
                 doctorInfo = user
             }

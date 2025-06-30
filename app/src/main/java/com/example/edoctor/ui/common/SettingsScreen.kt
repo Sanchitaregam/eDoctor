@@ -23,34 +23,90 @@ import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.Dispatchers
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.dao.AdminDao
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.utils.SessionManager
+import com.example.edoctor.R
+import com.example.edoctor.ui.common.ActionCard
+import com.example.edoctor.ui.common.ProfileInfoRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
-    val sessionManager = remember { SessionManager(context) }
-    val userId = sessionManager.getCurrentUserId()
     val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
+    val adminDao = db.adminDao()
+    val doctorDao = db.doctorDao()
+    val patientDao = db.patientDao()
+    val sessionManager = remember { SessionManager(context) }
     val coroutineScope = rememberCoroutineScope()
+    var user by remember { mutableStateOf<Any?>(null) }
+    var showProfileDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var editedName by remember { mutableStateOf("") }
+    var editedPhone by remember { mutableStateOf("") }
+    var editedAddress by remember { mutableStateOf("") }
+    var editedDob by remember { mutableStateOf("") }
+    var editedGender by remember { mutableStateOf("") }
+    var editedSpecialization by remember { mutableStateOf("") }
+    var editedExperience by remember { mutableStateOf("") }
+    var editedBloodGroup by remember { mutableStateOf("") }
 
-    var showEditProfileDialog by remember { mutableStateOf(false) }
-    var user by remember { mutableStateOf<UserEntity?>(null) }
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var experience by remember { mutableStateOf("") }
-    var specialization by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("") }
-    var dob by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var bloodGroup by remember { mutableStateOf("") }
-    
+    val currentUserId = sessionManager.getCurrentUserId()
+
+    LaunchedEffect(Unit) {
+        val currentUserId = sessionManager.getCurrentUserId()
+        val userRole = sessionManager.getCurrentUserRole()
+        
+        if (currentUserId != -1 && userRole != null) {
+            val loadedUser = withContext(Dispatchers.IO) {
+                when (userRole.lowercase()) {
+                    "admin" -> adminDao.getAdminById(currentUserId)
+                    "doctor" -> doctorDao.getDoctorById(currentUserId)
+                    "patient" -> patientDao.getPatientById(currentUserId)
+                    else -> null
+                }
+            }
+            user = loadedUser
+            
+            // Initialize edit fields
+            when (loadedUser) {
+                is AdminEntity -> {
+                    editedName = loadedUser.name
+                    editedPhone = loadedUser.phone
+                    editedAddress = loadedUser.address ?: ""
+                    editedDob = loadedUser.dob ?: ""
+                    editedGender = loadedUser.gender ?: ""
+                }
+                is DoctorEntity -> {
+                    editedName = loadedUser.name
+                    editedPhone = loadedUser.phone
+                    editedAddress = loadedUser.address ?: ""
+                    editedDob = loadedUser.dob ?: ""
+                    editedGender = loadedUser.gender ?: ""
+                    editedSpecialization = loadedUser.specialization ?: ""
+                    editedExperience = loadedUser.experience?.toString() ?: ""
+                }
+                is PatientEntity -> {
+                    editedName = loadedUser.name
+                    editedPhone = loadedUser.phone
+                    editedAddress = loadedUser.address ?: ""
+                    editedDob = loadedUser.dob ?: ""
+                    editedGender = loadedUser.gender ?: ""
+                    editedBloodGroup = loadedUser.bloodGroup ?: ""
+                }
+            }
+        }
+    }
+
     // Dropdown states
     var showGenderDropdown by remember { mutableStateOf(false) }
     var showBloodGroupDropdown by remember { mutableStateOf(false) }
@@ -59,24 +115,6 @@ fun SettingsScreen(navController: NavController) {
     // Options
     val genderOptions = listOf("Male", "Female", "Other")
     val bloodGroupOptions = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
-
-    // Load user data
-    LaunchedEffect(userId) {
-        val fetchedUser = withContext(kotlinx.coroutines.Dispatchers.IO) {
-            userDao.getUserById(userId)
-        }
-        fetchedUser?.let {
-            user = it
-            name = it.name
-            phone = it.phone
-            experience = it.experience ?: ""
-            specialization = it.specialization ?: ""
-            gender = it.gender ?: ""
-            dob = it.dob ?: ""
-            address = it.address ?: ""
-            bloodGroup = it.bloodGroup ?: ""
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -99,7 +137,7 @@ fun SettingsScreen(navController: NavController) {
         ) {
 
             Button(
-                onClick = { showEditProfileDialog = true },
+                onClick = { showEditDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -115,7 +153,7 @@ fun SettingsScreen(navController: NavController) {
             }
 
             Button(
-                onClick = { navController.navigate("change_password/$userId") },
+                onClick = { navController.navigate("change_password/$currentUserId") },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -141,9 +179,9 @@ fun SettingsScreen(navController: NavController) {
         }
 
         // Edit Profile Dialog
-        if (showEditProfileDialog) {
+        if (showEditDialog) {
             AlertDialog(
-                onDismissRequest = { showEditProfileDialog = false },
+                onDismissRequest = { showEditDialog = false },
                 title = { Text("Edit Profile") },
                 text = {
                     Column(
@@ -151,14 +189,14 @@ fun SettingsScreen(navController: NavController) {
                         modifier = Modifier.verticalScroll(rememberScrollState())
                     ) {
                         OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
+                            value = editedName,
+                            onValueChange = { editedName = it },
                             label = { Text("Full Name") },
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
-                            value = phone,
-                            onValueChange = { phone = it },
+                            value = editedPhone,
+                            onValueChange = { editedPhone = it },
                             label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -170,7 +208,7 @@ fun SettingsScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             OutlinedTextField(
-                                value = gender,
+                                value = editedGender,
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Gender") },
@@ -187,7 +225,7 @@ fun SettingsScreen(navController: NavController) {
                                     DropdownMenuItem(
                                         text = { Text(option) },
                                         onClick = {
-                                            gender = option
+                                            editedGender = option
                                             showGenderDropdown = false
                                         }
                                     )
@@ -198,7 +236,7 @@ fun SettingsScreen(navController: NavController) {
                         // Date of Birth with Date Picker
                         Column {
                             OutlinedTextField(
-                                value = dob,
+                                value = editedDob,
                                 onValueChange = {},
                                 readOnly = true,
                                 label = { Text("Date of Birth") },
@@ -213,21 +251,21 @@ fun SettingsScreen(navController: NavController) {
                         }
                         
                         OutlinedTextField(
-                            value = address,
-                            onValueChange = { address = it },
+                            value = editedAddress,
+                            onValueChange = { editedAddress = it },
                             label = { Text("Address") },
                             modifier = Modifier.fillMaxWidth()
                         )
                         
                         // Blood Group Dropdown - Only for patients
-                        if (user?.role == "patient") {
+                        if (user is PatientEntity) {
                             ExposedDropdownMenuBox(
                                 expanded = showBloodGroupDropdown,
                                 onExpandedChange = { showBloodGroupDropdown = !showBloodGroupDropdown },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 OutlinedTextField(
-                                    value = bloodGroup,
+                                    value = editedBloodGroup,
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("Blood Group") },
@@ -244,7 +282,7 @@ fun SettingsScreen(navController: NavController) {
                                         DropdownMenuItem(
                                             text = { Text(option) },
                                             onClick = {
-                                                bloodGroup = option
+                                                editedBloodGroup = option
                                                 showBloodGroupDropdown = false
                                             }
                                         )
@@ -262,7 +300,7 @@ fun SettingsScreen(navController: NavController) {
                                     TextButton(onClick = {
                                         datePickerState.selectedDateMillis?.let { millis ->
                                             val date = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                                            dob = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                            editedDob = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                                         }
                                         showDatePicker = false
                                     }) {
@@ -279,16 +317,16 @@ fun SettingsScreen(navController: NavController) {
                             }
                         }
                         
-                        if (user?.role == "doctor") {
+                        if (user is DoctorEntity) {
                             OutlinedTextField(
-                                value = specialization,
-                                onValueChange = { specialization = it },
+                                value = editedSpecialization,
+                                onValueChange = { editedSpecialization = it },
                                 label = { Text("Specialization") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             OutlinedTextField(
-                                value = experience,
-                                onValueChange = { experience = it },
+                                value = editedExperience,
+                                onValueChange = { editedExperience = it },
                                 label = { Text("Experience (years)") },
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -300,20 +338,44 @@ fun SettingsScreen(navController: NavController) {
                         onClick = {
                             coroutineScope.launch {
                                 user?.let {
-                                    val updated = it.copy(
-                                        name = name,
-                                        phone = phone,
-                                        experience = experience,
-                                        specialization = specialization,
-                                        gender = gender,
-                                        dob = dob,
-                                        address = address,
-                                        bloodGroup = bloodGroup
-                                    )
-                                    withContext(kotlinx.coroutines.Dispatchers.IO) {
-                                        userDao.updateUser(updated)
+                                    withContext(Dispatchers.IO) {
+                                        when (it) {
+                                            is AdminEntity -> {
+                                                val updated = it.copy(
+                                                    name = editedName,
+                                                    phone = editedPhone,
+                                                    gender = editedGender,
+                                                    dob = editedDob,
+                                                    address = editedAddress
+                                                )
+                                                adminDao.updateAdmin(updated)
+                                            }
+                                            is DoctorEntity -> {
+                                                val updated = it.copy(
+                                                    name = editedName,
+                                                    phone = editedPhone,
+                                                    gender = editedGender,
+                                                    dob = editedDob,
+                                                    address = editedAddress,
+                                                    specialization = editedSpecialization,
+                                                    experience = editedExperience.toIntOrNull()
+                                                )
+                                                doctorDao.updateDoctor(updated)
+                                            }
+                                            is PatientEntity -> {
+                                                val updated = it.copy(
+                                                    name = editedName,
+                                                    phone = editedPhone,
+                                                    gender = editedGender,
+                                                    dob = editedDob,
+                                                    address = editedAddress,
+                                                    bloodGroup = editedBloodGroup
+                                                )
+                                                patientDao.updatePatient(updated)
+                                            }
+                                        }
                                     }
-                                    showEditProfileDialog = false
+                                    showEditDialog = false
                                 }
                             }
                         }
@@ -322,7 +384,7 @@ fun SettingsScreen(navController: NavController) {
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditProfileDialog = false }) {
+                    TextButton(onClick = { showEditDialog = false }) {
                         Text("Cancel")
                     }
                 }

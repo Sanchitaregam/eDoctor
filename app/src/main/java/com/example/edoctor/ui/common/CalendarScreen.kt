@@ -197,7 +197,7 @@ fun CalendarScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
                 // Day headers
                 Row(modifier = Modifier.fillMaxWidth()) {

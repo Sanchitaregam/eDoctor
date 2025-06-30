@@ -24,9 +24,9 @@ import kotlinx.coroutines.withContext
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
 import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.entities.AppointmentEntity
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.PatientEntity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,12 +34,10 @@ fun MedicalHistoryScreen(navController: NavController, patientId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
-    val userDao = db.userDao()
+    val patientDao = db.patientDao()
     val coroutineScope = rememberCoroutineScope()
     
-    var patient by remember { mutableStateOf<UserEntity?>(null) }
-    var allAppointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-    var doctorNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    var patient by remember { mutableStateOf<PatientEntity?>(null) }
     var isLoading by remember { mutableStateOf(true) }
 
     fun loadMedicalHistory() {
@@ -47,29 +45,11 @@ fun MedicalHistoryScreen(navController: NavController, patientId: Int) {
             try {
                 // Load patient information
                 val loadedPatient = withContext(Dispatchers.IO) {
-                    userDao.getUserById(patientId)
+                    patientDao.getPatientById(patientId)
                 }
                 patient = loadedPatient
-                
-                // Load all appointments (past and future)
-                val appointments = withContext(Dispatchers.IO) {
-                    appointmentDao.getAppointmentsByPatientId(patientId)
-                }
-                allAppointments = appointments.sortedByDescending { it.date }
-                
-                // Load doctor names for all appointments
-                val doctorIds = appointments.map { it.doctorId }.distinct()
-                val names = mutableMapOf<Int, String>()
-                doctorIds.forEach { doctorId ->
-                    val doctor = withContext(Dispatchers.IO) {
-                        userDao.getUserById(doctorId)
-                    }
-                    names[doctorId] = doctor?.name ?: "Unknown Doctor"
-                }
-                doctorNames = names
             } catch (e: Exception) {
-                allAppointments = emptyList()
-                doctorNames = emptyMap()
+                patient = null
             } finally {
                 isLoading = false
             }

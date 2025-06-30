@@ -25,9 +25,13 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.AdminDao
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
@@ -36,66 +40,71 @@ import com.example.edoctor.R
 import com.example.edoctor.ui.common.StatCard
 import com.example.edoctor.ui.common.UserCard
 import com.example.edoctor.ui.common.AppointmentCard
+import com.example.edoctor.ui.common.ProfileInfoRow
+import com.example.edoctor.ui.common.DoctorCard
+import com.example.edoctor.ui.common.PatientCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProfileScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
+    val adminDao = db.adminDao()
+    val doctorDao = db.doctorDao()
+    val patientDao = db.patientDao()
     val appointmentDao = db.appointmentDao()
     val sessionManager = remember { SessionManager(context) }
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
-    var adminInfo by remember { mutableStateOf<UserEntity?>(null) }
-    var doctors by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
-    var patients by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+    var adminInfo by remember { mutableStateOf<AdminEntity?>(null) }
+    var doctors by remember { mutableStateOf<List<DoctorEntity>>(emptyList()) }
+    var patients by remember { mutableStateOf<List<PatientEntity>>(emptyList()) }
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-    var statistics by remember { mutableStateOf(AdminStatistics(0, 0, 0)) }
-    var currentTab by remember { mutableStateOf(AdminTab.DASHBOARD) }
-    var showDeleteDialog by remember { mutableStateOf<UserEntity?>(null) }
+    var selectedTab by remember { mutableStateOf(0) }
+    var isLoading by remember { mutableStateOf(true) }
+    var showDeleteDialog by remember { mutableStateOf<Any?>(null) }
 
-    // Load admin data
     LaunchedEffect(Unit) {
         val currentUserId = sessionManager.getCurrentUserId()
-        if (currentUserId > 0) {
+        if (currentUserId != -1) {
+            try {
             val admin = withContext(Dispatchers.IO) {
-                userDao.getUserById(currentUserId)
+                    adminDao.getAdminById(currentUserId)
             }
             adminInfo = admin
+                
+                val allDoctors = withContext(Dispatchers.IO) { doctorDao.getAllDoctors() }
+                val allPatients = withContext(Dispatchers.IO) { patientDao.getAllPatients() }
+                val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
+                doctors = allDoctors
+                patients = allPatients
+                appointments = allAppointments
+            } catch (e: Exception) {
+                // Handle error
+            } finally {
+                isLoading = false
+            }
         }
     }
 
-    // Load all data
-    LaunchedEffect(currentTab) {
-        when (currentTab) {
-            AdminTab.DASHBOARD -> {
-                val allDoctors = withContext(Dispatchers.IO) { userDao.getAllDoctors() }
-                val allPatients = withContext(Dispatchers.IO) { userDao.getAllPatients() }
-                val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
-                
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 0) {
+            val allDoctors = withContext(Dispatchers.IO) { doctorDao.getAllDoctors() }
+            val allPatients = withContext(Dispatchers.IO) { patientDao.getAllPatients() }
+            val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
+            doctors = allDoctors
+            patients = allPatients
+            appointments = allAppointments
+        } else if (selectedTab == 1) {
+            val allDoctors = withContext(Dispatchers.IO) { doctorDao.getAllDoctors() }
                 doctors = allDoctors
+        } else if (selectedTab == 2) {
+            val allPatients = withContext(Dispatchers.IO) { patientDao.getAllPatients() }
                 patients = allPatients
-                appointments = allAppointments
-                statistics = AdminStatistics(
-                    totalDoctors = allDoctors.size,
-                    totalPatients = allPatients.size,
-                    totalAppointments = allAppointments.size
-                )
-            }
-            AdminTab.DOCTORS -> {
-                val allDoctors = withContext(Dispatchers.IO) { userDao.getAllDoctors() }
-                doctors = allDoctors
-            }
-            AdminTab.PATIENTS -> {
-                val allPatients = withContext(Dispatchers.IO) { userDao.getAllPatients() }
-                patients = allPatients
-            }
-            AdminTab.APPOINTMENTS -> {
+        } else if (selectedTab == 3) {
                 val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
                 appointments = allAppointments
-            }
         }
     }
 
@@ -157,28 +166,43 @@ fun AdminProfileScreen(navController: NavController, userId: Int) {
 
             // Tab Row
             TabRow(
-                selectedTabIndex = currentTab.ordinal,
+                selectedTabIndex = selectedTab,
                 modifier = Modifier.padding(horizontal = 16.dp)
             ) {
-                AdminTab.values().forEach { tab ->
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = { Text("Doctors") }
+                )
                     Tab(
-                        selected = currentTab == tab,
-                        onClick = { currentTab = tab },
-                        text = { Text(tab.title) }
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = { Text("Patients") }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = { Text("Appointments") }
                     )
-                }
             }
 
             // Content based on selected tab
-            when (currentTab) {
-                AdminTab.DASHBOARD -> DashboardContent(statistics, doctors, patients, appointments)
-                AdminTab.DOCTORS -> DoctorsContent(doctors, onDeleteUser = { user ->
+            when (selectedTab) {
+                0 -> {
+                    val statistics = AdminStatistics(
+                        totalDoctors = doctors.size,
+                        totalPatients = patients.size,
+                        totalAppointments = appointments.size
+                    )
+                    DashboardContent(statistics, doctors, patients, appointments)
+                }
+                1 -> DoctorsContent(doctors, onDeleteUser = { user ->
                     showDeleteDialog = user
                 })
-                AdminTab.PATIENTS -> PatientsContent(patients, onDeleteUser = { user ->
+                2 -> PatientsContent(patients, onDeleteUser = { user ->
                     showDeleteDialog = user
                 })
-                AdminTab.APPOINTMENTS -> AppointmentsContent(appointments)
+                3 -> AppointmentsContent(appointments)
             }
         }
 
@@ -187,18 +211,33 @@ fun AdminProfileScreen(navController: NavController, userId: Int) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = null },
                 title = { Text("Delete User") },
-                text = { Text("Are you sure you want to delete ${user.name}? This action cannot be undone.") },
+                text = { 
+                    val userName = when (user) {
+                        is DoctorEntity -> user.name
+                        is PatientEntity -> user.name
+                        else -> "Unknown"
+                    }
+                    Text("Are you sure you want to delete $userName? This action cannot be undone.") 
+                },
                 confirmButton = {
                     TextButton(
                         onClick = {
                             coroutineScope.launch {
                                 withContext(Dispatchers.IO) {
-                                    userDao.deleteUser(user)
+                                    when (user) {
+                                        is DoctorEntity -> doctorDao.deleteDoctor(user)
+                                        is PatientEntity -> patientDao.deletePatient(user)
+                                    }
                                 }
-                                snackbarHostState.showSnackbar("${user.name} deleted successfully")
+                                val userName = when (user) {
+                                    is DoctorEntity -> user.name
+                                    is PatientEntity -> user.name
+                                    else -> "Unknown"
+                                }
+                                snackbarHostState.showSnackbar("$userName deleted successfully")
                                 showDeleteDialog = null
                                 // Refresh current tab
-                                currentTab = currentTab
+                                selectedTab = selectedTab
                             }
                         }
                     ) {
@@ -218,8 +257,8 @@ fun AdminProfileScreen(navController: NavController, userId: Int) {
 @Composable
 fun DashboardContent(
     statistics: AdminStatistics,
-    doctors: List<UserEntity>,
-    patients: List<UserEntity>,
+    doctors: List<DoctorEntity>,
+    patients: List<PatientEntity>,
     appointments: List<AppointmentEntity>
 ) {
     LazyColumn(
@@ -275,8 +314,8 @@ fun DashboardContent(
         }
 
         items(doctors.take(3)) { doctor ->
-            UserCard(
-                user = doctor,
+            DoctorCard(
+                doctor = doctor,
                 showDeleteButton = false
             )
         }
@@ -291,8 +330,8 @@ fun DashboardContent(
         }
 
         items(patients.take(3)) { patient ->
-            UserCard(
-                user = patient,
+            PatientCard(
+                patient = patient,
                 showDeleteButton = false
             )
         }
@@ -314,8 +353,8 @@ fun DashboardContent(
 
 @Composable
 fun DoctorsContent(
-    doctors: List<UserEntity>,
-    onDeleteUser: (UserEntity) -> Unit
+    doctors: List<DoctorEntity>,
+    onDeleteUser: (DoctorEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -331,8 +370,8 @@ fun DoctorsContent(
         }
 
         items(doctors) { doctor ->
-            UserCard(
-                user = doctor,
+            DoctorCard(
+                doctor = doctor,
                 showDeleteButton = true,
                 onDelete = { onDeleteUser(doctor) }
             )
@@ -342,8 +381,8 @@ fun DoctorsContent(
 
 @Composable
 fun PatientsContent(
-    patients: List<UserEntity>,
-    onDeleteUser: (UserEntity) -> Unit
+    patients: List<PatientEntity>,
+    onDeleteUser: (PatientEntity) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -359,8 +398,8 @@ fun PatientsContent(
         }
 
         items(patients) { patient ->
-            UserCard(
-                user = patient,
+            PatientCard(
+                patient = patient,
                 showDeleteButton = true,
                 onDelete = { onDeleteUser(patient) }
             )

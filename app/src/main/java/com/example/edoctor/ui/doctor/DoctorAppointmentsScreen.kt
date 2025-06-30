@@ -21,8 +21,12 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.dao.AppointmentDao
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.utils.SessionManager
+import com.example.edoctor.R
 import com.example.edoctor.ui.common.AppointmentCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,18 +35,18 @@ fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
-    val userDao = db.userDao()
-    val coroutineScope = rememberCoroutineScope()
+    val patientDao = db.patientDao()
+    val sessionManager = remember { SessionManager(context) }
     
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-    var patientNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    fun loadAppointments() {
-        coroutineScope.launch {
+    LaunchedEffect(doctorId) {
+        val currentDoctorId = sessionManager.getCurrentUserId()
+        if (currentDoctorId != -1) {
             try {
                 val allAppointments = withContext(Dispatchers.IO) {
-                    appointmentDao.getAppointmentsForDoctor(doctorId)
+                    appointmentDao.getAppointmentsForDoctor(currentDoctorId)
                 }
                 
                 // Filter to only show upcoming appointments (today and future)
@@ -52,28 +56,12 @@ fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
                 }
                 
                 appointments = upcomingAppointments.sortedBy { it.date }
-                
-                // Load patient names for all appointments
-                val patientIds = upcomingAppointments.map { it.patientId }.distinct()
-                val names = mutableMapOf<Int, String>()
-                patientIds.forEach { patientId ->
-                    val patient = withContext(Dispatchers.IO) {
-                        userDao.getUserById(patientId)
-                    }
-                    names[patientId] = patient?.name ?: "Unknown Patient"
-                }
-                patientNames = names
             } catch (e: Exception) {
                 appointments = emptyList()
-                patientNames = emptyMap()
             } finally {
                 isLoading = false
             }
         }
-    }
-
-    LaunchedEffect(doctorId) {
-        loadAppointments()
     }
 
     Scaffold(
@@ -149,7 +137,7 @@ fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                patientNames[appointment.patientId] ?: "Unknown Patient",
+                                appointment.patientName ?: "Unknown Patient",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )

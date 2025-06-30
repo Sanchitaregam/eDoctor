@@ -27,11 +27,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // Import data layer
-import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
-import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.entities.UserEntity
 import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.data.entities.AdminEntity
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
 
@@ -150,8 +149,8 @@ fun AppointmentCard(appointment: AppointmentEntity) {
 }
 
 @Composable
-fun UserCard(
-    user: UserEntity,
+fun DoctorCard(
+    doctor: DoctorEntity,
     showDeleteButton: Boolean,
     onDelete: (() -> Unit)? = null
 ) {
@@ -167,7 +166,7 @@ fun UserCard(
         ) {
             Image(
                 painter = painterResource(R.drawable.default_profile),
-                contentDescription = user.name,
+                contentDescription = doctor.name,
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
@@ -177,23 +176,30 @@ fun UserCard(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = user.name,
+                    text = "Dr. ${doctor.name}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = user.email,
+                    text = doctor.email,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Role: ${user.role.capitalize()}",
+                    text = "Role: Doctor",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
-                if (user.role == "doctor" && user.specialization != null) {
+                if (doctor.specialization != null) {
                     Text(
-                        text = "Specialization: ${user.specialization}",
+                        text = "Specialization: ${doctor.specialization}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (doctor.experience != null) {
+                    Text(
+                        text = "Experience: ${doctor.experience} years",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -208,6 +214,151 @@ fun UserCard(
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun PatientCard(
+    patient: PatientEntity,
+    showDeleteButton: Boolean,
+    onDelete: (() -> Unit)? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(R.drawable.default_profile),
+                contentDescription = patient.name,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = patient.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = patient.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Role: Patient",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                if (patient.bloodGroup != null) {
+                    Text(
+                        text = "Blood Group: ${patient.bloodGroup}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            
+            if (showDeleteButton && onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AdminCard(
+    admin: AdminEntity,
+    showDeleteButton: Boolean,
+    onDelete: (() -> Unit)? = null
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(R.drawable.default_profile),
+                contentDescription = admin.name,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+            )
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = admin.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = admin.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Role: Admin",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            if (showDeleteButton && onDelete != null) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Keep the old UserCard for backward compatibility but mark as deprecated
+@Deprecated("Use DoctorCard, PatientCard, or AdminCard instead")
+@Composable
+fun UserCard(
+    user: Any,
+    showDeleteButton: Boolean,
+    onDelete: (() -> Unit)? = null
+) {
+    when (user) {
+        is DoctorEntity -> DoctorCard(user, showDeleteButton, onDelete)
+        is PatientEntity -> PatientCard(user, showDeleteButton, onDelete)
+        is AdminEntity -> AdminCard(user, showDeleteButton, onDelete)
+        else -> {
+            // Fallback for unknown types
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Text("Unknown user type", modifier = Modifier.padding(16.dp))
             }
         }
     }

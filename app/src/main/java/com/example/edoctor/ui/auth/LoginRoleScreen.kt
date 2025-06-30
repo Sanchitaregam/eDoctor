@@ -30,6 +30,13 @@ fun LoginRoleScreen(navController: NavController) {
             )
 
             Button(
+                onClick = { navController.navigate("login/admin") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Login as Admin")
+            }
+
+            Button(
                 onClick = { navController.navigate("login/doctor") },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -41,13 +48,6 @@ fun LoginRoleScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Login as Patient")
-            }
-
-            Button(
-                onClick = { navController.navigate("login/admin") },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Login as Admin")
             }
         }
     }

@@ -22,14 +22,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.regex.Pattern
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.dao.PatientDao
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.utils.BackButton
 import com.example.edoctor.utils.validatePasswordStrength
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import android.os.Build
+import androidx.annotation.RequiresApi
+import java.time.LocalDate
+import com.example.edoctor.ui.common.DatePicker
 
 // ✅ Moved out of composable
 fun savePatientToDatabase(
@@ -39,16 +45,21 @@ fun savePatientToDatabase(
     phone: String,
     password: String,
     gender: String,
-    role: String = "patient",
+    dob: LocalDate?,
+    address: String?,
+    bloodGroup: String?,
     onResult: (Boolean) -> Unit
 ) {
     val db = AppDatabase.getDatabase(context)
-    val userDao = db.userDao()
-    val user = UserEntity(0, name, email, phone, password, gender, role)
+    val patientDao = db.patientDao()
+    val patient = PatientEntity(
+        0, name, email, phone, password, gender, 
+        dob?.toString(), address, bloodGroup, ""
+    )
 
     CoroutineScope(Dispatchers.IO).launch {
         try {
-            userDao.insertUser(user)
+            patientDao.insertPatient(patient)
             onResult(true)
         } catch (e: Exception) {
             onResult(false)
@@ -56,6 +67,7 @@ fun savePatientToDatabase(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun PatientRegistrationScreen(navController: NavController) {
     var name by remember { mutableStateOf("") }
@@ -64,6 +76,10 @@ fun PatientRegistrationScreen(navController: NavController) {
     var password by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
     var showGenderDropdown by remember { mutableStateOf(false) }
+    var dob by remember { mutableStateOf<LocalDate?>(null) }
+    var address by remember { mutableStateOf("") }
+    var bloodGroup by remember { mutableStateOf("") }
+    var showBloodGroupDropdown by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("") }
 
     val (strengthMessage, strengthColor) = validatePasswordStrength(password)
@@ -72,7 +88,7 @@ fun PatientRegistrationScreen(navController: NavController) {
     fun validateAndSubmit() {
         when {
             name.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || gender.isBlank() -> {
-                message = "Please fill all fields."
+                message = "Please fill all required fields."
             }
             !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
                 message = "Invalid email address."
@@ -91,7 +107,9 @@ fun PatientRegistrationScreen(navController: NavController) {
                     phone,
                     password,
                     gender,
-                    "patient"
+                    dob,
+                    address.takeIf { it.isNotBlank() },
+                    bloodGroup.takeIf { it.isNotBlank() }
                 ) { success ->
                     message = if (success) "Registration successful!" else "Failed to save patient to database."
                 }
@@ -99,21 +117,19 @@ fun PatientRegistrationScreen(navController: NavController) {
         }
     }
 
+    val scrollState = rememberScrollState()
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF0F0F0)),
+        modifier = Modifier.fillMaxSize().background(Color(0xFFF0F0F0)),
         contentAlignment = Alignment.Center
     ) {
         Card(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(0.9f),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(0.9f),
             shape = RoundedCornerShape(16.dp),
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
                 modifier = Modifier
+                    .verticalScroll(scrollState)
                     .padding(24.dp)
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -133,7 +149,14 @@ fun PatientRegistrationScreen(navController: NavController) {
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
-                Text("Patient Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Patient Registration", 
+                    fontSize = 22.sp, 
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Full Name") })
                 OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") })
@@ -152,6 +175,19 @@ fun PatientRegistrationScreen(navController: NavController) {
                     color = strengthColor,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(top = 4.dp)
+                )
+
+                DatePicker(
+                    selectedDate = dob,
+                    onDateSelected = { dob = it },
+                    label = "Date of Birth"
+                )
+
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("Address") },
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 ExposedDropdownMenuBox(
@@ -182,6 +218,34 @@ fun PatientRegistrationScreen(navController: NavController) {
                     }
                 }
 
+                ExposedDropdownMenuBox(
+                    expanded = showBloodGroupDropdown,
+                    onExpandedChange = { showBloodGroupDropdown = !showBloodGroupDropdown }
+                ) {
+                    OutlinedTextField(
+                        value = bloodGroup,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Blood Group (Optional)") },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Blood Group") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = showBloodGroupDropdown,
+                        onDismissRequest = { showBloodGroupDropdown = false }
+                    ) {
+                        listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-").forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option) },
+                                onClick = {
+                                    bloodGroup = option
+                                    showBloodGroupDropdown = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Button(
                     onClick = { validateAndSubmit() },
                     modifier = Modifier
@@ -195,7 +259,7 @@ fun PatientRegistrationScreen(navController: NavController) {
                 if (message.isNotEmpty()) {
                     Text(
                         text = message,
-                        color = if (message == "Registration successful!") Color.Green else Color.Red,
+                        color = if (message == "Registration successful!") Color(0xFF2E7D32) else Color.Red,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                 }

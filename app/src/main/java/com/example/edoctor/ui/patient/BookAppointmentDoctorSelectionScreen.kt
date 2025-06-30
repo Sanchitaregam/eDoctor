@@ -19,8 +19,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.dao.DoctorDao
+import com.example.edoctor.data.dao.PatientDao
+import com.example.edoctor.data.dao.AvailabilityDao
+import com.example.edoctor.data.entities.DoctorEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AvailabilityEntity
+import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,33 +35,38 @@ import kotlinx.coroutines.withContext
 fun BookAppointmentDoctorSelectionScreen(navController: NavController, patientId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
+    val doctorDao = db.doctorDao()
+    val patientDao = db.patientDao()
     val availabilityDao = db.availabilityDao()
+    val sessionManager = remember { SessionManager(context) }
     
-    var doctors by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+    var doctors by remember { mutableStateOf<List<DoctorEntity>>(emptyList()) }
     var doctorAvailabilities by remember { mutableStateOf<Map<Int, List<AvailabilityEntity>>>(emptyMap()) }
-    var patient by remember { mutableStateOf<UserEntity?>(null) }
+    var patient by remember { mutableStateOf<PatientEntity?>(null) }
 
     LaunchedEffect(patientId) {
-        val loadedDoctors = withContext(Dispatchers.IO) {
-            userDao.getAllDoctors()
-        }
-        doctors = loadedDoctors
-        
-        val loadedPatient = withContext(Dispatchers.IO) {
-            userDao.getUserById(patientId)
-        }
-        patient = loadedPatient
-        
-        // Load availability for each doctor
-        val availabilities = mutableMapOf<Int, List<AvailabilityEntity>>()
-        loadedDoctors.forEach { doctor ->
-            val doctorAvailability = withContext(Dispatchers.IO) {
-                availabilityDao.getAvailabilityForDoctor(doctor.id)
+        val currentPatientId = sessionManager.getCurrentUserId()
+        if (currentPatientId != -1) {
+            val loadedDoctors = withContext(Dispatchers.IO) {
+                doctorDao.getAllDoctors()
             }
-            availabilities[doctor.id] = doctorAvailability
+            doctors = loadedDoctors.filter { it.isApproved == true }
+            
+            val loadedPatient = withContext(Dispatchers.IO) {
+                patientDao.getPatientById(currentPatientId)
+            }
+            patient = loadedPatient
+            
+            // Load availability for each doctor
+            val availabilities = mutableMapOf<Int, List<AvailabilityEntity>>()
+            loadedDoctors.forEach { doctor ->
+                val doctorAvailability = withContext(Dispatchers.IO) {
+                    availabilityDao.getAvailabilityForDoctor(doctor.id)
+                }
+                availabilities[doctor.id] = doctorAvailability
+            }
+            doctorAvailabilities = availabilities
         }
-        doctorAvailabilities = availabilities
     }
 
     Scaffold(
@@ -101,7 +111,7 @@ fun BookAppointmentDoctorSelectionScreen(navController: NavController, patientId
 
 @Composable
 fun DoctorAvailabilityCard(
-    doctor: UserEntity,
+    doctor: DoctorEntity,
     availability: List<AvailabilityEntity>,
     onBookClick: () -> Unit
 ) {

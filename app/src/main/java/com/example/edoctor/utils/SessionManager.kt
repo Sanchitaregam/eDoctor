@@ -60,4 +60,8 @@ class SessionManager(context: Context) {
     fun getCurrentUserId(): Int {
         return sharedPreferences.getInt(KEY_USER_ID, -1)
     }
+
+    fun getCurrentUserRole(): String? {
+        return sharedPreferences.getString(KEY_USER_ROLE, null)
+    }
 } 

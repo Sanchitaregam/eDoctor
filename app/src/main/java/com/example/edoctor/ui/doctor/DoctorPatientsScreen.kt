@@ -24,50 +24,58 @@ import kotlinx.coroutines.withContext
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
-import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.dao.AppointmentDao
-import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
+import com.example.edoctor.ui.common.PatientCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoctorPatientsScreen(navController: NavController, userId: Int) {
+fun DoctorPatientsScreen(navController: NavController, doctorId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
     val appointmentDao = db.appointmentDao()
+    val patientDao = db.patientDao()
+    val sessionManager = remember { SessionManager(context) }
     
-    var patients by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+    var patients by remember { mutableStateOf<List<PatientEntity>>(emptyList()) }
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(userId) {
-        try {
-            // Get all patients who have appointments with this doctor
-            val doctorAppointments = withContext(Dispatchers.IO) {
-                appointmentDao.getAppointmentsForDoctor(userId)
-            }
-            appointments = doctorAppointments
-            
-            // Get unique patient IDs from appointments
-            val patientIds = doctorAppointments.map { it.patientId }.distinct()
-            
-            // Get patient details for each patient ID
-            val patientList = mutableListOf<UserEntity>()
-            patientIds.forEach { patientId ->
-                val patient = withContext(Dispatchers.IO) {
-                    userDao.getUserById(patientId)
+    LaunchedEffect(doctorId) {
+        val currentDoctorId = sessionManager.getCurrentUserId()
+        if (currentDoctorId != -1) {
+            try {
+                // Get all appointments for this doctor
+                val loadedAppointments = withContext(Dispatchers.IO) {
+                    appointmentDao.getAppointmentsForDoctor(currentDoctorId)
                 }
-                patient?.let { patientList.add(it) }
+                appointments = loadedAppointments
+                
+                // Get unique patient IDs from appointments
+                val patientIds = loadedAppointments.map { it.patientId }.distinct()
+                
+                // Load patient details for each patient ID
+                val patientList = mutableListOf<PatientEntity>()
+                patientIds.forEach { patientId ->
+                    val patient = withContext(Dispatchers.IO) {
+                        patientDao.getPatientById(patientId)
+                    }
+                    if (patient != null) {
+                        patientList.add(patient)
+                    }
+                }
+                
+                patients = patientList
+            } catch (e: Exception) {
+                patients = emptyList()
+                appointments = emptyList()
+            } finally {
+                isLoading = false
             }
-            patients = patientList
-        } catch (e: Exception) {
-            // Handle any errors gracefully
-            patients = emptyList()
-            appointments = emptyList()
-        } finally {
-            isLoading = false
         }
     }
 
@@ -150,7 +158,7 @@ fun DoctorPatientsScreen(navController: NavController, userId: Int) {
 
 @Composable
 fun PatientCard(
-    patient: UserEntity,
+    patient: PatientEntity,
     appointmentCount: Int
 ) {
     Card(

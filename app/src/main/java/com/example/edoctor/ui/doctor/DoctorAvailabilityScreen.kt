@@ -95,14 +95,14 @@ fun DoctorAvailabilityScreen(navController: NavController, userId: Int) {
                         withContext(Dispatchers.IO) {
                             availabilityDao.deleteAllForDoctor(userId)
                             selectedDays.forEach { day ->
-                                availabilityDao.insertAvailability(
-                                    AvailabilityEntity(
-                                        doctorId = userId,
+                            availabilityDao.insertAvailability(
+                                AvailabilityEntity(
+                                    doctorId = userId,
                                         days = day,
                                         fromTime = "09:00",
                                         toTime = "17:00"
-                                    )
                                 )
+                            )
                             }
                         }
                         Toast.makeText(context, "Availability saved", Toast.LENGTH_SHORT).show()
