@@ -138,6 +138,23 @@ fun AdminRegistrationScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
+        // Gender selection
+        Text("Gender", fontWeight = FontWeight.Bold)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            listOf("Male", "Female", "Other").forEach { option ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        selected = gender == option,
+                        onClick = { gender = option }
+                    )
+                    Text(option)
+                }
+            }
+        }
+
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },

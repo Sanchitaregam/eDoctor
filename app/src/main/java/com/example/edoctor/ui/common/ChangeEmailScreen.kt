@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -28,7 +29,7 @@ import com.example.edoctor.utils.SessionManager
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangeEmailScreen(navController: NavController) {
-    var currentEmail by remember { mutableStateOf("") }
+    var currentPassword by remember { mutableStateOf("") }
     var newEmail by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
     var successMessage by remember { mutableStateOf("") }
@@ -60,9 +61,10 @@ fun ChangeEmailScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
-                value = currentEmail,
-                onValueChange = { currentEmail = it },
-                label = { Text("Current Email") },
+                value = currentPassword,
+                onValueChange = { currentPassword = it },
+                label = { Text("Current Password") },
+                visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -90,45 +92,60 @@ fun ChangeEmailScreen(navController: NavController) {
                             }
                             
                             if (user != null) {
-                                // Verify current email
-                                val isValidEmail = when (user) {
-                                    is AdminEntity -> user.email == currentEmail
-                                    is DoctorEntity -> user.email == currentEmail
-                                    is PatientEntity -> user.email == currentEmail
+                                // Verify current password
+                                val isValidPassword = when (user) {
+                                    is AdminEntity -> user.password == currentPassword
+                                    is DoctorEntity -> user.password == currentPassword
+                                    is PatientEntity -> user.password == currentPassword
                                     else -> false
                                 }
                                 
-                                if (isValidEmail) {
+                                if (isValidPassword) {
                                     if (newEmail.isNotEmpty() && newEmail.contains("@")) {
-                                        // Update email
-                                        val updatedUser = when (user) {
-                                            is AdminEntity -> user.copy(email = newEmail)
-                                            is DoctorEntity -> user.copy(email = newEmail)
-                                            is PatientEntity -> user.copy(email = newEmail)
-                                            else -> user
-                                        }
-                                        
-                                        withContext(Dispatchers.IO) {
-                                            when (updatedUser) {
-                                                is AdminEntity -> adminDao.updateAdmin(updatedUser)
-                                                is DoctorEntity -> doctorDao.updateDoctor(updatedUser)
-                                                is PatientEntity -> patientDao.updatePatient(updatedUser)
+                                        // Check if new email already exists
+                                        val emailExists = withContext(Dispatchers.IO) {
+                                            when (userRole.lowercase()) {
+                                                "admin" -> adminDao.getAdminByEmail(newEmail) != null
+                                                "doctor" -> doctorDao.getDoctorByEmail(newEmail) != null
+                                                "patient" -> patientDao.getPatientByEmail(newEmail) != null
+                                                else -> false
                                             }
                                         }
                                         
-                                        // Update session
-                                        sessionManager.saveLoginSession(currentUserId, userRole, newEmail)
-                                        
-                                        successMessage = "Email updated successfully"
-                                        errorMessage = ""
-                                        currentEmail = ""
-                                        newEmail = ""
+                                        if (!emailExists) {
+                                            // Update email
+                                            val updatedUser = when (user) {
+                                                is AdminEntity -> user.copy(email = newEmail)
+                                                is DoctorEntity -> user.copy(email = newEmail)
+                                                is PatientEntity -> user.copy(email = newEmail)
+                                                else -> user
+                                            }
+                                            
+                                            withContext(Dispatchers.IO) {
+                                                when (updatedUser) {
+                                                    is AdminEntity -> adminDao.updateAdmin(updatedUser)
+                                                    is DoctorEntity -> doctorDao.updateDoctor(updatedUser)
+                                                    is PatientEntity -> patientDao.updatePatient(updatedUser)
+                                                }
+                                            }
+                                            
+                                            // Update session
+                                            sessionManager.saveLoginSession(currentUserId, userRole, newEmail)
+                                            
+                                            successMessage = "Email updated successfully"
+                                            errorMessage = ""
+                                            currentPassword = ""
+                                            newEmail = ""
+                                        } else {
+                                            errorMessage = "Email already exists. Please choose a different email."
+                                            successMessage = ""
+                                        }
                                     } else {
                                         errorMessage = "Please enter a valid email address"
                                         successMessage = ""
                                     }
                                 } else {
-                                    errorMessage = "Current email is incorrect"
+                                    errorMessage = "Current password is incorrect"
                                     successMessage = ""
                                 }
                             } else {
@@ -158,7 +175,7 @@ fun ChangeEmailScreen(navController: NavController) {
             if (successMessage.isNotEmpty()) {
                 Text(
                     text = successMessage, 
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Color(0xFF2E7D32), // Dark Green - same as strong password
                     style = MaterialTheme.typography.bodyMedium
                 )
             }

@@ -2,6 +2,8 @@ package com.example.edoctor.ui.common
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import com.example.edoctor.utils.SessionManager
 import com.example.edoctor.R
 import com.example.edoctor.ui.common.ActionCard
 import com.example.edoctor.ui.common.ProfileInfoRow
+import com.example.edoctor.ui.common.DatePicker
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -110,7 +114,6 @@ fun SettingsScreen(navController: NavController) {
     // Dropdown states
     var showGenderDropdown by remember { mutableStateOf(false) }
     var showBloodGroupDropdown by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
     
     // Options
     val genderOptions = listOf("Male", "Female", "Other")
@@ -234,21 +237,32 @@ fun SettingsScreen(navController: NavController) {
                         }
                         
                         // Date of Birth with Date Picker
-                        Column {
-                            OutlinedTextField(
-                                value = editedDob,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Date of Birth") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            TextButton(
-                                onClick = { showDatePicker = true },
-                                modifier = Modifier.align(Alignment.Start)
-                            ) {
-                                Text("Select Date")
+                        var selectedDob by remember { mutableStateOf<LocalDate?>(null) }
+                        
+                        // Initialize selectedDob from editedDob
+                        LaunchedEffect(editedDob) {
+                            if (editedDob.isNotEmpty()) {
+                                try {
+                                    selectedDob = LocalDate.parse(editedDob, DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                                } catch (e: Exception) {
+                                    // Try alternative format
+                                    try {
+                                        selectedDob = LocalDate.parse(editedDob, DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                    } catch (e2: Exception) {
+                                        selectedDob = null
+                                    }
+                                }
                             }
                         }
+                        
+                        DatePicker(
+                            selectedDate = selectedDob,
+                            onDateSelected = { date ->
+                                selectedDob = date
+                                editedDob = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                            },
+                            label = "Date of Birth"
+                        )
                         
                         OutlinedTextField(
                             value = editedAddress,
@@ -291,32 +305,6 @@ fun SettingsScreen(navController: NavController) {
                             }
                         }
                         
-                        // Date Picker Dialog
-                        if (showDatePicker) {
-                            val datePickerState = rememberDatePickerState()
-                            DatePickerDialog(
-                                onDismissRequest = { showDatePicker = false },
-                                confirmButton = {
-                                    TextButton(onClick = {
-                                        datePickerState.selectedDateMillis?.let { millis ->
-                                            val date = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
-                                            editedDob = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                                        }
-                                        showDatePicker = false
-                                    }) {
-                                        Text("OK")
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showDatePicker = false }) {
-                                        Text("Cancel")
-                                    }
-                                }
-                            ) {
-                                DatePicker(state = datePickerState)
-                            }
-                        }
-                        
                         if (user is DoctorEntity) {
                             OutlinedTextField(
                                 value = editedSpecialization,
@@ -328,6 +316,38 @@ fun SettingsScreen(navController: NavController) {
                                 value = editedExperience,
                                 onValueChange = { editedExperience = it },
                                 label = { Text("Experience (years)") },
+                                trailingIcon = {
+                                    Column {
+                                        IconButton(
+                                            onClick = {
+                                                val currentValue = editedExperience.toIntOrNull() ?: 0
+                                                editedExperience = (currentValue + 1).toString()
+                                            },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.KeyboardArrowUp,
+                                                contentDescription = "Increase",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                val currentValue = editedExperience.toIntOrNull() ?: 0
+                                                if (currentValue > 0) {
+                                                    editedExperience = (currentValue - 1).toString()
+                                                }
+                                            },
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.KeyboardArrowDown,
+                                                contentDescription = "Decrease",
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

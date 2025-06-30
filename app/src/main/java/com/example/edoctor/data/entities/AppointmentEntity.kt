@@ -12,5 +12,6 @@ data class AppointmentEntity(
     val doctorName: String,
     val date: String,
     val time: String,
+    val status: String = "Pending",
     val notes: String? = null  // <- this is the correct way
 )

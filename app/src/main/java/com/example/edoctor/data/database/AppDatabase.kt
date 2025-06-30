@@ -23,7 +23,7 @@ import com.example.edoctor.data.entities.AdminEntity
         PatientEntity::class,
         AdminEntity::class
     ],
-    version = 6, // 🔼 increase the version number
+    version = 7, // 🔼 increase the version number
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

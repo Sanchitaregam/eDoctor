@@ -46,6 +46,9 @@ import androidx.compose.ui.draw.clip
 
 // Import moved UI components
 import com.example.edoctor.ui.admin.AdminProfileScreen
+import com.example.edoctor.ui.admin.AdminDoctorsScreen
+import com.example.edoctor.ui.admin.AdminPatientsScreen
+import com.example.edoctor.ui.admin.AdminAppointmentsScreen
 import com.example.edoctor.ui.doctor.DoctorDashboardScreen
 import com.example.edoctor.ui.doctor.DoctorAvailabilityScreen
 import com.example.edoctor.ui.doctor.DoctorAppointmentsScreen
@@ -137,6 +140,19 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             AdminProfileScreen(navController, userId)
+                        }
+
+                        // Admin management screens
+                        composable("admin_doctors") {
+                            AdminDoctorsScreen(navController)
+                        }
+                        
+                        composable("admin_patients") {
+                            AdminPatientsScreen(navController)
+                        }
+                        
+                        composable("admin_appointments") {
+                            AdminAppointmentsScreen(navController)
                         }
 
                         composable(
