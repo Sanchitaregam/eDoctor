@@ -24,5 +24,12 @@ data class UserEntity(
     var specialization: String? = null,
     var rating: Float = 0f,
     var ratingCount: Int = 0,
-    var isApproved: Boolean = true // Default to true for existing users, false for new doctors if approval is required
+    var isApproved: Boolean = true, // Default to true for existing users, false for new doctors if approval is required
+
+    // Patient medical history fields
+    var knownConditions: String? = null,
+    var allergies: String? = null,
+    var currentMedications: String? = null,
+    var pastSurgeries: String? = null,
+    var familyHistory: String? = null
 )

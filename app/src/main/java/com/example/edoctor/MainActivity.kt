@@ -75,6 +75,7 @@ import com.example.edoctor.data.entities.AvailabilityEntity
 
 // Import patient UI components
 import com.example.edoctor.ui.patient.BookAppointmentDoctorSelectionScreen
+import com.example.edoctor.ui.patient.MedicalHistoryScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -185,6 +186,14 @@ class MainActivity : ComponentActivity() {
                             val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             PatientAppointmentsScreen(navController, doctorId, patientId)
+                        }
+                        
+                        composable(
+                            "medical_history/{patientId}",
+                            arguments = listOf(navArgument("patientId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
+                            MedicalHistoryScreen(navController, patientId)
                         }
                         
                         // DoctorAppointmentsScreen moved to ui/doctor/DoctorAppointmentsScreen.kt

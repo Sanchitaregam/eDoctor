@@ -197,7 +197,10 @@ fun PatientDashboardScreen(navController: NavController, userId: Int) {
                     title = "Medical History",
                     subtitle = "View your medical records and history",
                     icon = Icons.Default.Person,
-                    onClick = { /* Navigate to medical history */ },
+                    onClick = { 
+                        val currentUserId = sessionManager.getCurrentUserId()
+                        navController.navigate("medical_history/$currentUserId")
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

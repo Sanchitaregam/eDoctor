@@ -12,7 +12,7 @@ import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.data.entities.AvailabilityEntity
 @Database(
     entities = [UserEntity::class, AppointmentEntity::class, AvailabilityEntity::class],
-    version = 2, // 🔼 increase the version number
+    version = 3, // 🔼 increase the version number
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
