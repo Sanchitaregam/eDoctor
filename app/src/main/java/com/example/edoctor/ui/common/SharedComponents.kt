@@ -235,7 +235,7 @@ fun ProfileInfoRow(label: String, value: String) {
 }
 
 @Composable
-fun PatientAppointmentCard(appointment: AppointmentEntity) {
+fun PatientAppointmentCard(appointment: AppointmentEntity, doctorName: String? = null) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -255,7 +255,7 @@ fun PatientAppointmentCard(appointment: AppointmentEntity) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Appointment (ID: ${appointment.doctorId})",
+                    text = "Appointment with Dr. ${doctorName ?: "Unknown Doctor"}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

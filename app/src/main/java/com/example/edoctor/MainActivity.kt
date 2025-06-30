@@ -48,7 +48,7 @@ import androidx.compose.ui.draw.clip
 import com.example.edoctor.ui.admin.AdminProfileScreen
 import com.example.edoctor.ui.doctor.DoctorProfileScreen
 import com.example.edoctor.ui.doctor.DoctorAvailabilityScreen
-import com.example.edoctor.ui.patient.PatientProfileScreen
+import com.example.edoctor.ui.patient.PatientDashboardScreen
 import com.example.edoctor.ui.patient.PatientAppointmentsScreen
 import com.example.edoctor.ui.patient.PatientDetailsScreen
 import com.example.edoctor.ui.auth.LoginScreen
@@ -72,7 +72,7 @@ import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.data.entities.AvailabilityEntity
 
 // Import patient UI components
-import com.example.edoctor.ui.patient.DoctorSelectionScreen
+import com.example.edoctor.ui.patient.BookAppointmentDoctorSelectionScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,7 +121,7 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("userId") { type = NavType.IntType })
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            PatientProfileScreen(navController, userId)
+                            PatientDashboardScreen(navController, userId)
                         }
 
                         composable(
@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("patientId") { type = NavType.IntType })
                         ) { backStackEntry ->
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
-                            DoctorSelectionScreen(navController, patientId)
+                            BookAppointmentDoctorSelectionScreen(navController, patientId)
                         }
                     }
                 }
@@ -385,9 +385,27 @@ fun BookAppointmentScreen(
     time: String
 ) {
     val context = LocalContext.current
-    val appointmentDao = AppDatabase.getDatabase(context).appointmentDao()
+    val db = remember { AppDatabase.getDatabase(context) }
+    val appointmentDao = db.appointmentDao()
+    val userDao = db.userDao()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    
+    var doctor by remember { mutableStateOf<UserEntity?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    // Load doctor information
+    LaunchedEffect(doctorId) {
+        try {
+            doctor = withContext(Dispatchers.IO) {
+                userDao.getUserById(doctorId)
+            }
+        } catch (e: Exception) {
+            doctor = null
+        } finally {
+            isLoading = false
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
@@ -402,31 +420,47 @@ fun BookAppointmentScreen(
         ) {
             Text("Confirm Booking", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(16.dp))
-            Text("Doctor ID: $doctorId")
-            Text("Patient Name: $patientName")
-            Text("Appointment Date: $date")
-            Text("Time: $time")
-            Spacer(Modifier.height(24.dp))
-
-            Button(onClick = {
-                coroutineScope.launch {
-                    val appointment = AppointmentEntity(
-                        doctorId = doctorId,
-                        patientId = patientId,
-                        patientName = patientName,
-                        date = date,
-                        time = time
-                    )
-                    appointmentDao.insertAppointment(appointment)
-
-                    snackbarHostState.showSnackbar("Appointment booked successfully")
-                    delay(1000)
-                    navController.navigate("patient_profile/$patientId") {
-                        popUpTo("book_appointment/$doctorId/$patientId/$patientName/$date/$time") { inclusive = true }
-                    }
+            
+            if (isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Text("Doctor: ${doctor?.name ?: "Unknown"}")
+                doctor?.specialization?.let { specialization ->
+                    Text("Specialization: $specialization")
                 }
-            }) {
-                Text("Confirm Booking")
+                Text("Patient Name: $patientName")
+                Text("Appointment Date: $date")
+                Text("Time: $time")
+                Spacer(Modifier.height(24.dp))
+
+                Button(onClick = {
+                    coroutineScope.launch {
+                        val appointment = AppointmentEntity(
+                            doctorId = doctorId,
+                            patientId = patientId,
+                            patientName = patientName,
+                            date = date,
+                            time = time
+                        )
+                        appointmentDao.insertAppointment(appointment)
+
+                        // Navigate immediately without any snackbar delay
+                        try {
+                            navController.navigate("patient_profile/$patientId") {
+                                popUpTo(0) { inclusive = false }
+                            }
+                        } catch (e: Exception) {
+                            // Fallback: try to pop back to the start and navigate
+                            navController.popBackStack(0, false)
+                            navController.navigate("patient_profile/$patientId")
+                        }
+                        
+                        // Show snackbar after navigation (optional)
+                        snackbarHostState.showSnackbar("Appointment booked successfully")
+                    }
+                }) {
+                    Text("Confirm Booking")
+                }
             }
         }
     }

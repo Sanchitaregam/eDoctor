@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoctorSelectionScreen(navController: NavController, patientId: Int) {
+fun BookAppointmentDoctorSelectionScreen(navController: NavController, patientId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val userDao = db.userDao()

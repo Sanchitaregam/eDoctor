@@ -29,19 +29,34 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
+    val userDao = db.userDao()
     val coroutineScope = rememberCoroutineScope()
 
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
+    var doctorNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
     fun loadAppointments() {
         coroutineScope.launch {
             try {
-                appointments = withContext(Dispatchers.IO) {
+                val loadedAppointments = withContext(Dispatchers.IO) {
                     appointmentDao.getAppointmentsByPatientId(patientId)
                 }
+                appointments = loadedAppointments
+                
+                // Load doctor names for all appointments
+                val doctorIds = loadedAppointments.map { it.doctorId }.distinct()
+                val names = mutableMapOf<Int, String>()
+                doctorIds.forEach { doctorId ->
+                    val doctor = withContext(Dispatchers.IO) {
+                        userDao.getUserById(doctorId)
+                    }
+                    names[doctorId] = doctor?.name ?: "Unknown Doctor"
+                }
+                doctorNames = names
             } catch (e: Exception) {
                 appointments = emptyList()
+                doctorNames = emptyMap()
             } finally {
                 isLoading = false
             }
@@ -134,7 +149,7 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Appointment with Dr. (ID: ${appointment.doctorId})",
+                                "Appointment with Dr. ${doctorNames[appointment.doctorId] ?: "Unknown Doctor"}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )

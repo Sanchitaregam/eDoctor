@@ -39,6 +39,8 @@ import java.util.*
 import com.example.edoctor.data.database.AppDatabase
 import com.example.edoctor.data.dao.AvailabilityDao
 import com.example.edoctor.data.entities.AvailabilityEntity
+import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.data.dao.AppointmentDao
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -51,23 +53,29 @@ fun CalendarScreen(
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val availabilityDao = db.availabilityDao()
+    val appointmentDao = db.appointmentDao()
     val coroutineScope = rememberCoroutineScope()
     
-    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
     var selectedTime by remember { mutableStateOf("") }
     var doctorAvailability by remember { mutableStateOf<List<AvailabilityEntity>>(emptyList()) }
+    var existingAppointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var availableTimeSlots by remember { mutableStateOf<List<String>>(emptyList()) }
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
 
-    // Load doctor's availability
+    // Load doctor's availability and existing appointments
     LaunchedEffect(doctorId) {
         try {
             doctorAvailability = withContext(Dispatchers.IO) {
                 availabilityDao.getAvailabilityForDoctor(doctorId)
             }
+            existingAppointments = withContext(Dispatchers.IO) {
+                appointmentDao.getAppointmentsForDoctor(doctorId)
+            }
         } catch (e: Exception) {
             doctorAvailability = emptyList()
+            existingAppointments = emptyList()
         } finally {
             isLoading = false
         }
@@ -79,16 +87,26 @@ fun CalendarScreen(
         return doctorAvailability.any { it.days.trim().lowercase() == dayOfWeekFull }
     }
 
+    // Check if a time slot is already booked
+    fun isTimeSlotBooked(date: LocalDate, time: String): Boolean {
+        val dateString = date.toString()
+        return existingAppointments.any { appointment ->
+            appointment.date == dateString && appointment.time == time
+        }
+    }
+
     // Generate time slots based on selected date and doctor's availability
     fun generateTimeSlots(date: LocalDate): List<String> {
         val dayOfWeekFull = date.dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH).trim().lowercase()
         val isAvailable = doctorAvailability.any { it.days.trim().lowercase() == dayOfWeekFull }
         if (!isAvailable) return emptyList()
+        
         val timeSlots = mutableListOf<String>()
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val startTime = java.time.LocalTime.parse("09:00", formatter)
-        val endTime = java.time.LocalTime.parse("17:00", formatter)
+        val endTime = java.time.LocalTime.parse("16:00", formatter)
         var currentTime = startTime
+        
         while (!currentTime.isAfter(endTime)) {
             val timeString = currentTime.format(DateTimeFormatter.ofPattern("h:mm a"))
             timeSlots.add(timeString)
@@ -98,10 +116,13 @@ fun CalendarScreen(
     }
 
     // Update available time slots when date changes
-    LaunchedEffect(selectedDate, doctorAvailability) {
+    LaunchedEffect(selectedDate, doctorAvailability, existingAppointments) {
         availableTimeSlots = generateTimeSlots(selectedDate)
         if (availableTimeSlots.isNotEmpty() && selectedTime.isEmpty()) {
             selectedTime = availableTimeSlots.first()
+        } else if (selectedTime.isNotEmpty() && !availableTimeSlots.contains(selectedTime)) {
+            // If currently selected time is no longer available, clear it
+            selectedTime = ""
         }
     }
 
@@ -207,8 +228,8 @@ fun CalendarScreen(
                             val isAvailable = isDateAvailable(date)
                             val isSelected = date == selectedDate
                             val isToday = date == LocalDate.now()
-                            val isPast = !date.isAfter(LocalDate.now())
-                            val enabled = isAvailable && !isPast
+                            val isPastOrToday = !date.isAfter(LocalDate.now())
+                            val enabled = isAvailable && !isPastOrToday
                             Box(
                                 modifier = Modifier
                                     .size(40.dp)
@@ -216,7 +237,7 @@ fun CalendarScreen(
                                     .background(
                                         when {
                                             isSelected -> MaterialTheme.colorScheme.primary
-                                            isAvailable && !isPast -> MaterialTheme.colorScheme.primaryContainer
+                                            isAvailable && !isPastOrToday -> MaterialTheme.colorScheme.primaryContainer
                                             else -> Color.Transparent
                                         }
                                     )
@@ -239,7 +260,7 @@ fun CalendarScreen(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                     color = when {
                                         isSelected -> MaterialTheme.colorScheme.onPrimary
-                                        isAvailable && !isPast -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        isAvailable && !isPastOrToday -> MaterialTheme.colorScheme.onPrimaryContainer
                                         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                                     }
                                 )
@@ -265,15 +286,19 @@ fun CalendarScreen(
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         } else if (availableTimeSlots.isEmpty()) {
+            val isDateAvailable = isDateAvailable(selectedDate)
+            val hasBookedSlots = selectedDate.isAfter(LocalDate.now()) && isDateAvailable && 
+                existingAppointments.any { it.date == selectedDate.toString() }
+            
             Text(
-                "No availability for this date",
+                if (hasBookedSlots) "All time slots are booked for this date" else "No availability for this date",
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.error,
                 textAlign = TextAlign.Center
             )
         } else {
             Text(
-                "Available Time Slots:",
+                "Time Slots:",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -285,18 +310,24 @@ fun CalendarScreen(
                 columns = GridCells.Fixed(3),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.height(120.dp)
+                modifier = Modifier.height(200.dp)
             ) {
                 items(availableTimeSlots) { time ->
+                    val isBooked = isTimeSlotBooked(selectedDate, time)
+                    val isSelectable = !isBooked
+                    
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { selectedTime = time },
+                            .clickable(enabled = isSelectable) { 
+                                if (isSelectable) selectedTime = time 
+                            },
                         colors = CardDefaults.cardColors(
-                            containerColor = if (selectedTime == time) 
-                                MaterialTheme.colorScheme.primary 
-                            else 
-                                MaterialTheme.colorScheme.surface
+                            containerColor = when {
+                                selectedTime == time -> MaterialTheme.colorScheme.primary
+                                isBooked -> MaterialTheme.colorScheme.surfaceVariant
+                                else -> MaterialTheme.colorScheme.surface
+                            }
                         ),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
@@ -304,12 +335,14 @@ fun CalendarScreen(
                             text = time,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(8.dp),
                             textAlign = TextAlign.Center,
-                            color = if (selectedTime == time) 
-                                MaterialTheme.colorScheme.onPrimary 
-                            else 
-                                MaterialTheme.colorScheme.onSurface
+                            fontSize = 14.sp,
+                            color = when {
+                                selectedTime == time -> MaterialTheme.colorScheme.onPrimary
+                                isBooked -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                else -> MaterialTheme.colorScheme.onSurface
+                            }
                         )
                     }
                 }
@@ -330,7 +363,7 @@ fun CalendarScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                enabled = selectedTime.isNotEmpty()
+                enabled = selectedTime.isNotEmpty() && !isTimeSlotBooked(selectedDate, selectedTime)
             ) {
                 Text(
                     "Confirm Appointment",

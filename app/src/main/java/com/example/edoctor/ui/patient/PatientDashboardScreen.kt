@@ -49,7 +49,7 @@ import com.example.edoctor.ui.common.PatientAppointmentCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientProfileScreen(navController: NavController, userId: Int) {
+fun PatientDashboardScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val userDao = AppDatabase.getDatabase(context).userDao()
     val appointmentDao = AppDatabase.getDatabase(context).appointmentDao()
@@ -57,6 +57,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
     
     var patient by remember { mutableStateOf<UserEntity?>(null) }
     var bookedAppointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
+    var totalAppointmentCount by remember { mutableStateOf(0) }
     var showProfileDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var showSearchResults by remember { mutableStateOf(false) }
@@ -74,6 +75,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             val appointments = withContext(Dispatchers.IO) {
                 appointmentDao.getAppointmentsByPatientId(currentUserId)
             }
+            totalAppointmentCount = appointments.size
             bookedAppointments = appointments.sortedBy { it.date }.take(5) // Show next 5 appointments
         }
     }
@@ -145,82 +147,14 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     StatCard(
                         title = "Booked Appointments",
-                        value = bookedAppointments.size.toString(),
-                        icon = Icons.Default.CalendarToday,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        title = "Health Tips",
-                        value = "5",
-                        icon = Icons.Default.HealthAndSafety,
-                        modifier = Modifier.weight(1f)
+                        value = totalAppointmentCount.toString(),
+                        icon = Icons.Default.CalendarToday
                     )
                 }
-            }
-
-            // Search Doctors Section
-            item {
-                Text(
-                    "Find a Doctor",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { 
-                                searchQuery = it
-                                showSearchResults = it.isNotEmpty()
-                            },
-                            label = { Text("Search by specialty or doctor name") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                        
-                        if (showSearchResults) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            TextButton(
-                                onClick = {
-                                    // Perform search
-                                    showSearchResults = false
-                                    val currentUserId = sessionManager.getCurrentUserId()
-                                    navController.navigate("select_doctor/$currentUserId")
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Search Doctors")
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Quick Book Appointment
-            item {
-                ActionCard(
-                    title = "Book New Appointment",
-                    subtitle = "Find and book with available doctors",
-                    icon = Icons.Default.CalendarToday,
-                    onClick = {
-                        val currentUserId = sessionManager.getCurrentUserId()
-                        navController.navigate("select_doctor/$currentUserId")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
             }
 
             // Quick Actions
@@ -229,6 +163,19 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
                     "Quick Actions",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
+                )
+            }
+
+            item {
+                ActionCard(
+                    title = "Book New Appointment",
+                    subtitle = "Book appointment with available doctors",
+                    icon = Icons.Default.CalendarToday,
+                    onClick = {
+                        val currentUserId = sessionManager.getCurrentUserId()
+                        navController.navigate("select_doctor/$currentUserId")
+                    },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -248,6 +195,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             item {
                 ActionCard(
                     title = "Medical History",
+                    subtitle = "View your medical records and history",
                     icon = Icons.Default.Person,
                     onClick = { /* Navigate to medical history */ },
                     modifier = Modifier.fillMaxWidth()
@@ -257,6 +205,7 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             item {
                 ActionCard(
                     title = "Settings",
+                    subtitle = "Edit profile, change email/password, logout",
                     icon = Icons.Default.Settings,
                     onClick = { navController.navigate("settings") },
                     modifier = Modifier.fillMaxWidth()
@@ -278,7 +227,6 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
                         ProfileInfoRow("Date of Birth", patient?.dob ?: "N/A")
                         ProfileInfoRow("Address", patient?.address ?: "N/A")
                         ProfileInfoRow("Blood Group", patient?.bloodGroup ?: "N/A")
-                        ProfileInfoRow("Emergency Contact", patient?.emergencyContact ?: "N/A")
                     }
                 },
                 confirmButton = {

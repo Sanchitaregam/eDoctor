@@ -4,18 +4,25 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 // Import data layer
 import com.example.edoctor.data.database.AppDatabase
@@ -39,6 +46,19 @@ fun SettingsScreen(navController: NavController) {
     var phone by remember { mutableStateOf("") }
     var experience by remember { mutableStateOf("") }
     var specialization by remember { mutableStateOf("") }
+    var gender by remember { mutableStateOf("") }
+    var dob by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var bloodGroup by remember { mutableStateOf("") }
+    
+    // Dropdown states
+    var showGenderDropdown by remember { mutableStateOf(false) }
+    var showBloodGroupDropdown by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    
+    // Options
+    val genderOptions = listOf("Male", "Female", "Other")
+    val bloodGroupOptions = listOf("A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-")
 
     // Load user data
     LaunchedEffect(userId) {
@@ -51,6 +71,10 @@ fun SettingsScreen(navController: NavController) {
             phone = it.phone
             experience = it.experience ?: ""
             specialization = it.specialization ?: ""
+            gender = it.gender ?: ""
+            dob = it.dob ?: ""
+            address = it.address ?: ""
+            bloodGroup = it.bloodGroup ?: ""
         }
     }
 
@@ -123,7 +147,8 @@ fun SettingsScreen(navController: NavController) {
                 title = { Text("Edit Profile") },
                 text = {
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.verticalScroll(rememberScrollState())
                     ) {
                         OutlinedTextField(
                             value = name,
@@ -137,6 +162,121 @@ fun SettingsScreen(navController: NavController) {
                             label = { Text("Phone Number") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        
+                        // Gender Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = showGenderDropdown,
+                            onExpandedChange = { showGenderDropdown = !showGenderDropdown },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = gender,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Gender") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showGenderDropdown) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = showGenderDropdown,
+                                onDismissRequest = { showGenderDropdown = false }
+                            ) {
+                                genderOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option) },
+                                        onClick = {
+                                            gender = option
+                                            showGenderDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Date of Birth with Date Picker
+                        Column {
+                            OutlinedTextField(
+                                value = dob,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Date of Birth") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            TextButton(
+                                onClick = { showDatePicker = true },
+                                modifier = Modifier.align(Alignment.Start)
+                            ) {
+                                Text("Select Date")
+                            }
+                        }
+                        
+                        OutlinedTextField(
+                            value = address,
+                            onValueChange = { address = it },
+                            label = { Text("Address") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        
+                        // Blood Group Dropdown
+                        ExposedDropdownMenuBox(
+                            expanded = showBloodGroupDropdown,
+                            onExpandedChange = { showBloodGroupDropdown = !showBloodGroupDropdown },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = bloodGroup,
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Blood Group") },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showBloodGroupDropdown) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor()
+                            )
+                            ExposedDropdownMenu(
+                                expanded = showBloodGroupDropdown,
+                                onDismissRequest = { showBloodGroupDropdown = false }
+                            ) {
+                                bloodGroupOptions.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option) },
+                                        onClick = {
+                                            bloodGroup = option
+                                            showBloodGroupDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        // Date Picker Dialog
+                        if (showDatePicker) {
+                            val datePickerState = rememberDatePickerState()
+                            DatePickerDialog(
+                                onDismissRequest = { showDatePicker = false },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        datePickerState.selectedDateMillis?.let { millis ->
+                                            val date = LocalDate.ofEpochDay(millis / (24 * 60 * 60 * 1000))
+                                            dob = date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                        }
+                                        showDatePicker = false
+                                    }) {
+                                        Text("OK")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showDatePicker = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            ) {
+                                DatePicker(state = datePickerState)
+                            }
+                        }
+                        
                         if (user?.role == "doctor") {
                             OutlinedTextField(
                                 value = specialization,
@@ -162,7 +302,11 @@ fun SettingsScreen(navController: NavController) {
                                         name = name,
                                         phone = phone,
                                         experience = experience,
-                                        specialization = specialization
+                                        specialization = specialization,
+                                        gender = gender,
+                                        dob = dob,
+                                        address = address,
+                                        bloodGroup = bloodGroup
                                     )
                                     withContext(kotlinx.coroutines.Dispatchers.IO) {
                                         userDao.updateUser(updated)
