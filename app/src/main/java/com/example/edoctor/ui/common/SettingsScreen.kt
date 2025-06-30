@@ -219,34 +219,36 @@ fun SettingsScreen(navController: NavController) {
                             modifier = Modifier.fillMaxWidth()
                         )
                         
-                        // Blood Group Dropdown
-                        ExposedDropdownMenuBox(
-                            expanded = showBloodGroupDropdown,
-                            onExpandedChange = { showBloodGroupDropdown = !showBloodGroupDropdown },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedTextField(
-                                value = bloodGroup,
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("Blood Group") },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showBloodGroupDropdown) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .menuAnchor()
-                            )
-                            ExposedDropdownMenu(
+                        // Blood Group Dropdown - Only for patients
+                        if (user?.role == "patient") {
+                            ExposedDropdownMenuBox(
                                 expanded = showBloodGroupDropdown,
-                                onDismissRequest = { showBloodGroupDropdown = false }
+                                onExpandedChange = { showBloodGroupDropdown = !showBloodGroupDropdown },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                bloodGroupOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(option) },
-                                        onClick = {
-                                            bloodGroup = option
-                                            showBloodGroupDropdown = false
-                                        }
-                                    )
+                                OutlinedTextField(
+                                    value = bloodGroup,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Blood Group") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showBloodGroupDropdown) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = showBloodGroupDropdown,
+                                    onDismissRequest = { showBloodGroupDropdown = false }
+                                ) {
+                                    bloodGroupOptions.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option) },
+                                            onClick = {
+                                                bloodGroup = option
+                                                showBloodGroupDropdown = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

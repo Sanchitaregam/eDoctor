@@ -1,6 +1,5 @@
-package com.example.edoctor.ui.patient
+package com.example.edoctor.ui.doctor
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,9 +8,11 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
@@ -22,55 +23,63 @@ import kotlinx.coroutines.withContext
 import com.example.edoctor.data.database.AppDatabase
 import com.example.edoctor.data.dao.AppointmentDao
 import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.ui.common.AppointmentCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patientId: Int) {
+fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val appointmentDao = db.appointmentDao()
     val userDao = db.userDao()
     val coroutineScope = rememberCoroutineScope()
-
+    
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-    var doctorNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
+    var patientNames by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
 
     fun loadAppointments() {
         coroutineScope.launch {
             try {
-                val loadedAppointments = withContext(Dispatchers.IO) {
-                    appointmentDao.getAppointmentsByPatientId(patientId)
+                val allAppointments = withContext(Dispatchers.IO) {
+                    appointmentDao.getAppointmentsForDoctor(doctorId)
                 }
-                appointments = loadedAppointments
                 
-                // Load doctor names for all appointments
-                val doctorIds = loadedAppointments.map { it.doctorId }.distinct()
-                val names = mutableMapOf<Int, String>()
-                doctorIds.forEach { doctorId ->
-                    val doctor = withContext(Dispatchers.IO) {
-                        userDao.getUserById(doctorId)
-                    }
-                    names[doctorId] = doctor?.name ?: "Unknown Doctor"
+                // Filter to only show upcoming appointments (today and future)
+                val today = java.time.LocalDate.now().toString()
+                val upcomingAppointments = allAppointments.filter { appointment ->
+                    appointment.date >= today
                 }
-                doctorNames = names
+                
+                appointments = upcomingAppointments.sortedBy { it.date }
+                
+                // Load patient names for all appointments
+                val patientIds = upcomingAppointments.map { it.patientId }.distinct()
+                val names = mutableMapOf<Int, String>()
+                patientIds.forEach { patientId ->
+                    val patient = withContext(Dispatchers.IO) {
+                        userDao.getUserById(patientId)
+                    }
+                    names[patientId] = patient?.name ?: "Unknown Patient"
+                }
+                patientNames = names
             } catch (e: Exception) {
                 appointments = emptyList()
-                doctorNames = emptyMap()
+                patientNames = emptyMap()
             } finally {
                 isLoading = false
             }
         }
     }
 
-    LaunchedEffect(patientId) {
+    LaunchedEffect(doctorId) {
         loadAppointments()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("My Appointments (${appointments.size})") },
+                title = { Text("Upcoming Appointments (${appointments.size})") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -84,7 +93,7 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentAlignment = androidx.compose.ui.Alignment.Center
+                contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
             }
@@ -95,7 +104,7 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
                     .padding(padding)
                     .padding(32.dp),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
                     Icons.Default.CalendarToday,
@@ -105,26 +114,17 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "No Appointments Yet",
+                    "No Upcoming Appointments",
                     style = MaterialTheme.typography.headlineMedium,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "You don't have any appointments booked yet. Book your first appointment to get started!",
+                    "You don't have any upcoming appointments scheduled.",
                     style = MaterialTheme.typography.bodyLarge,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = {
-                        navController.navigate("select_doctor/$patientId")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Book New Appointment")
-                }
             }
         } else {
             LazyColumn(
@@ -136,9 +136,9 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
             ) {
                 item {
                     Text(
-                        "Your Appointments",
+                        "Upcoming Appointments",
                         style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 
@@ -149,9 +149,9 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Dr. ${doctorNames[appointment.doctorId] ?: "Unknown Doctor"}",
+                                patientNames[appointment.patientId] ?: "Unknown Patient",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                fontWeight = FontWeight.Bold
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Date: ${appointment.date}")
@@ -165,4 +165,4 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
             }
         }
     }
-}
+} 

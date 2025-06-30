@@ -46,11 +46,12 @@ import androidx.compose.ui.draw.clip
 
 // Import moved UI components
 import com.example.edoctor.ui.admin.AdminProfileScreen
-import com.example.edoctor.ui.doctor.DoctorProfileScreen
+import com.example.edoctor.ui.doctor.DoctorDashboardScreen
 import com.example.edoctor.ui.doctor.DoctorAvailabilityScreen
+import com.example.edoctor.ui.doctor.DoctorAppointmentsScreen
+import com.example.edoctor.ui.doctor.DoctorPatientsScreen
 import com.example.edoctor.ui.patient.PatientDashboardScreen
 import com.example.edoctor.ui.patient.PatientAppointmentsScreen
-import com.example.edoctor.ui.patient.PatientDetailsScreen
 import com.example.edoctor.ui.auth.LoginScreen
 import com.example.edoctor.ui.auth.LoginRoleScreen
 import com.example.edoctor.ui.auth.AdminRegistrationScreen
@@ -60,6 +61,7 @@ import com.example.edoctor.ui.common.SettingsScreen
 import com.example.edoctor.ui.common.ChangeEmailScreen
 import com.example.edoctor.ui.common.ChangePasswordScreen
 import com.example.edoctor.ui.common.CalendarScreen
+import com.example.edoctor.ui.common.AppointmentCard
 import com.example.edoctor.utils.SessionManager
 
 // Import data layer
@@ -113,7 +115,7 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("userId") { type = NavType.IntType })
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            DoctorProfileScreen(navController, userId)
+                            DoctorDashboardScreen(navController, userId)
                         }
 
                         composable(
@@ -130,14 +132,6 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             AdminProfileScreen(navController, userId)
-                        }
-
-                        composable(
-                            "patient_details/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            PatientDetailsScreen(navController, userId)
                         }
 
                         composable(
@@ -192,6 +186,19 @@ class MainActivity : ComponentActivity() {
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             PatientAppointmentsScreen(navController, doctorId, patientId)
                         }
+                        
+                        // DoctorAppointmentsScreen moved to ui/doctor/DoctorAppointmentsScreen.kt
+                        
+                        composable(
+                            "doctor_appointments/{doctorId}",
+                            arguments = listOf(
+                                navArgument("doctorId") { type = NavType.IntType }
+                            )
+                        ) { backStackEntry ->
+                            val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
+                            DoctorAppointmentsScreen(navController, doctorId)
+                        }
+
                         composable(
                             "change_password/{userId}",
                             arguments = listOf(navArgument("userId") { type = NavType.IntType })
@@ -207,13 +214,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") { SettingsScreen(navController) }
                         
-                        composable(
-                            "patients_screen/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            PatientsScreen(navController, userId)
-                        }
+                        // PatientsScreen and PatientCard moved to ui/doctor/DoctorPatientsScreen.kt
                         
                         composable(
                             "select_doctor/{patientId}",
@@ -221,6 +222,14 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             BookAppointmentDoctorSelectionScreen(navController, patientId)
+                        }
+                        
+                        composable(
+                            "patients_screen/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            DoctorPatientsScreen(navController, userId)
                         }
                     }
                 }
@@ -468,171 +477,6 @@ fun BookAppointmentScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PatientsScreen(navController: NavController, userId: Int) {
-    val context = LocalContext.current
-    val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
-    val appointmentDao = db.appointmentDao()
-    
-    var patients by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
-    var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(userId) {
-        try {
-            // Get all patients who have appointments with this doctor
-            val doctorAppointments = withContext(Dispatchers.IO) {
-                appointmentDao.getAppointmentsForDoctor(userId)
-            }
-            appointments = doctorAppointments
-            
-            // Get unique patient IDs from appointments
-            val patientIds = doctorAppointments.map { it.patientId }.distinct()
-            
-            // Get patient details for each patient ID
-            val patientList = mutableListOf<UserEntity>()
-            patientIds.forEach { patientId ->
-                val patient = withContext(Dispatchers.IO) {
-                    userDao.getUserById(patientId)
-                }
-                patient?.let { patientList.add(it) }
-            }
-            patients = patientList
-        } catch (e: Exception) {
-            // Handle any errors gracefully
-            patients = emptyList()
-            appointments = emptyList()
-        } finally {
-            isLoading = false
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Patients (${patients.size})") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (patients.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    Icons.Default.Person,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "No Patients Yet",
-                    style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "You don't have any patients yet. Patients will appear here once they book appointments with you.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                item {
-                    Text(
-                        "Your Patients",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                items(patients) { patient ->
-                    PatientCard(
-                        patient = patient,
-                        appointmentCount = appointments.count { it.patientId == patient.id }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PatientCard(
-    patient: UserEntity,
-    appointmentCount: Int
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(R.drawable.default_profile),
-                contentDescription = patient.name,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-            )
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = patient.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = patient.email,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "$appointmentCount appointment${if (appointmentCount != 1) "s" else ""}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
 fun MessagesScreen(navController: NavController, userId: Int) {
     Scaffold(
         topBar = {
@@ -666,6 +510,111 @@ fun MessagesScreen(navController: NavController, userId: Int) {
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DoctorAppointmentsScreen(navController: NavController, doctorId: Int) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val appointmentDao = db.appointmentDao()
+    val userDao = db.userDao()
+    
+    var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(doctorId) {
+        try {
+            val allAppointments = withContext(Dispatchers.IO) {
+                appointmentDao.getAppointmentsForDoctor(doctorId)
+            }
+            
+            // Filter to only show upcoming appointments (today and future)
+            val today = java.time.LocalDate.now().toString()
+            val upcomingAppointments = allAppointments.filter { appointment ->
+                appointment.date >= today
+            }
+            
+            appointments = upcomingAppointments.sortedBy { it.date }
+        } catch (e: Exception) {
+            appointments = emptyList()
+        } finally {
+            isLoading = false
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Upcoming Appointments") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (appointments.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "No Upcoming Appointments",
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "You don't have any upcoming appointments scheduled.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        "Upcoming Appointments (${appointments.size})",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                items(appointments) { appointment ->
+                    AppointmentCard(appointment = appointment)
+                }
+            }
         }
     }
 }

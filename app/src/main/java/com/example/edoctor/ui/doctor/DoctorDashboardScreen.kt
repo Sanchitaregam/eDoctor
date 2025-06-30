@@ -47,7 +47,7 @@ import com.example.edoctor.ui.common.ProfileInfoRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DoctorProfileScreen(navController: NavController, userId: Int) {
+fun DoctorDashboardScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val userDao = db.userDao()
@@ -100,9 +100,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                 actions = {
                     IconButton(onClick = { showProfileDialog = true }) {
                         Icon(Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    IconButton(onClick = { /* Show notifications */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
                     }
                 }
             )
@@ -161,59 +158,17 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.Center
                 ) {
                     StatCard(
                         title = "Today's Appointments",
                         value = upcomingAppointments.count { it.date == "2024-01-15" }.toString(), // Placeholder date
-                        icon = Icons.Default.CalendarToday,
-                        modifier = Modifier.weight(1f)
-                    )
-                    StatCard(
-                        title = "Total Patients",
-                        value = upcomingAppointments.map { it.patientId }.distinct().size.toString(),
-                        icon = Icons.Default.Person,
-                        modifier = Modifier.weight(1f)
+                        icon = Icons.Default.CalendarToday
                     )
                 }
             }
 
-            // Upcoming Appointments Section
-            item {
-                Text(
-                    "Upcoming Appointments",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (upcomingAppointments.isNotEmpty()) {
-                items(upcomingAppointments) { appointment ->
-                    AppointmentCard(appointment = appointment)
-                }
-            } else {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "No upcoming appointments",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Action Buttons
+            // Quick Actions
             item {
                 Text(
                     "Quick Actions",
@@ -223,28 +178,39 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
-                        title = "Set Availability",
-                        icon = Icons.Default.CalendarToday,
-                        onClick = { navController.navigate("doctor_availability/$currentUserId") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActionCard(
-                        title = "View Patients",
-                        icon = Icons.Default.Person,
-                        onClick = { navController.navigate("patients_screen/$currentUserId") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ActionCard(
+                    title = "Upcoming Appointments",
+                    subtitle = "View your upcoming appointments",
+                    icon = Icons.Default.CalendarToday,
+                    onClick = { navController.navigate("doctor_appointments/$currentUserId") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                ActionCard(
+                    title = "Set Availability",
+                    subtitle = "Set your available weekdays",
+                    icon = Icons.Default.CalendarToday,
+                    onClick = { navController.navigate("doctor_availability/$currentUserId") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            item {
+                ActionCard(
+                    title = "View Patients",
+                    subtitle = "View your patient list and appointments",
+                    icon = Icons.Default.Person,
+                    onClick = { navController.navigate("patients_screen/$currentUserId") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             item {
                 ActionCard(
                     title = "Settings",
+                    subtitle = "Edit profile, change email/password, and logout",
                     icon = Icons.Default.Settings,
                     onClick = { navController.navigate("settings") },
                     modifier = Modifier.fillMaxWidth()
@@ -265,7 +231,8 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                             ProfileInfoRow("Phone", doctorInfo!!.phone.ifEmpty { "Not set" })
                             ProfileInfoRow("Experience", "${doctorInfo!!.experience ?: "0"} years")
                             ProfileInfoRow("Specialization", doctorInfo!!.specialization ?: "Not specified")
-                            ProfileInfoRow("Rating", "${doctorInfo!!.rating}/5.0")
+                            ProfileInfoRow("Date of Birth", doctorInfo!!.dob ?: "Not set")
+                            ProfileInfoRow("Gender", doctorInfo!!.gender.ifEmpty { "Not set" })
                         } else {
                             Text(
                                 "Profile data not found in database.\n\nThis may happen if the database was reset or the user account was deleted.",
