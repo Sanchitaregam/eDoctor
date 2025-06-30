@@ -23,5 +23,6 @@ data class UserEntity(
     // Doctor-specific fields (only used if role == "doctor")
     var specialization: String? = null,
     var rating: Float = 0f,
-    var ratingCount: Int = 0
+    var ratingCount: Int = 0,
+    var isApproved: Boolean = true // Default to true for existing users, false for new doctors if approval is required
 )

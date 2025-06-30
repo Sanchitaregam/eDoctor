@@ -8,6 +8,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +33,12 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Star
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +85,14 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             EditDoctorProfileScreen(navController, userId)
+                        }
+
+                        composable(
+                            "edit_patient_profile/{userId}",
+                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
+                            EditPatientProfileScreen(navController, userId)
                         }
 
                         composable(
@@ -187,6 +205,14 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             MessagesScreen(navController, userId)
+                        }
+                        
+                        composable(
+                            "select_doctor/{patientId}",
+                            arguments = listOf(navArgument("patientId") { type = NavType.IntType })
+                        ) { backStackEntry ->
+                            val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
+                            DoctorSelectionScreen(navController, patientId)
                         }
                     }
                 }
@@ -472,6 +498,172 @@ fun MessagesScreen(navController: NavController, userId: Int) {
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DoctorSelectionScreen(navController: NavController, patientId: Int) {
+    val context = LocalContext.current
+    val db = remember { AppDatabase.getDatabase(context) }
+    val userDao = db.userDao()
+    val availabilityDao = db.availabilityDao()
+    
+    var doctors by remember { mutableStateOf<List<UserEntity>>(emptyList()) }
+    var doctorAvailabilities by remember { mutableStateOf<Map<Int, List<AvailabilityEntity>>>(emptyMap()) }
+    var patient by remember { mutableStateOf<UserEntity?>(null) }
+
+    LaunchedEffect(patientId) {
+        val loadedDoctors = withContext(Dispatchers.IO) {
+            userDao.getAllDoctors()
+        }
+        doctors = loadedDoctors
+        
+        val loadedPatient = withContext(Dispatchers.IO) {
+            userDao.getUserById(patientId)
+        }
+        patient = loadedPatient
+        
+        // Load availability for each doctor
+        val availabilities = mutableMapOf<Int, List<AvailabilityEntity>>()
+        loadedDoctors.forEach { doctor ->
+            val doctorAvailability = withContext(Dispatchers.IO) {
+                availabilityDao.getAvailabilityForDoctor(doctor.id)
+            }
+            availabilities[doctor.id] = doctorAvailability
+        }
+        doctorAvailabilities = availabilities
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Select Doctor") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            item {
+                Text(
+                    "Available Doctors",
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            
+            items(doctors) { doctor ->
+                DoctorAvailabilityCard(
+                    doctor = doctor,
+                    availability = doctorAvailabilities[doctor.id] ?: emptyList(),
+                    onBookClick = {
+                        navController.navigate("calendar/${doctor.id}/$patientId/${patient?.name ?: ""}")
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DoctorAvailabilityCard(
+    doctor: UserEntity,
+    availability: List<AvailabilityEntity>,
+    onBookClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.default_profile),
+                    contentDescription = doctor.name,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        doctor.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        doctor.specialization ?: doctor.experience ?: "General Physician",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (doctor.rating > 0) {
+                        Row {
+                            repeat(doctor.rating.toInt()) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                " ${doctor.rating}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            if (availability.isNotEmpty()) {
+                Text(
+                    "Available Days:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                availability.forEach { avail ->
+                    Text(
+                        "${avail.days} - ${avail.fromTime} to ${avail.toTime}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    "No availability set",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Button(
+                onClick = onBookClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = availability.isNotEmpty()
+            ) {
+                Text("Book Appointment")
+            }
         }
     }
 }

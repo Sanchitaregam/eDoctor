@@ -20,10 +20,19 @@ interface UserDao {
     @Update
     suspend fun updateUser(user: UserEntity)
 
+    @Delete
+    suspend fun deleteUser(user: UserEntity)
+
     @Query("SELECT * FROM users WHERE LOWER(role) = 'doctor'")
     suspend fun getAllDoctors(): List<UserEntity>
 
+    @Query("SELECT * FROM users WHERE LOWER(role) = 'patient'")
+    suspend fun getAllPatients(): List<UserEntity>
+
     @Query("SELECT * FROM users")
     suspend fun getAllUsers(): List<UserEntity>
+
+    @Query("UPDATE users SET isApproved = :isApproved WHERE id = :doctorId")
+    suspend fun approveDoctor(doctorId: Int, isApproved: Boolean)
 
 }

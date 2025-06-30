@@ -16,5 +16,8 @@ interface AppointmentDao {
 
     @Query("SELECT * FROM appointments WHERE doctorId = :doctorId AND patientId = :patientId")
     suspend fun getAppointmentsByDoctorAndPatient(doctorId: Int, patientId: Int): List<AppointmentEntity>
+
+    @Query("SELECT * FROM appointments")
+    suspend fun getAllAppointments(): List<AppointmentEntity>
 }
 
