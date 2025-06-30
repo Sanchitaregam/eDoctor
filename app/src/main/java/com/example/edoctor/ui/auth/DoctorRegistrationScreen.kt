@@ -91,7 +91,14 @@ fun EnhancedDoctorRegistrationScreen(navController: NavController) {
                 modifier = Modifier.padding(24.dp).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                BackButton(navController)
+                Button(
+                    onClick = { navController.navigate("login/doctor") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text("Login as Doctor")
+                }
 
                 Text("Fill Your Details to Register as Doctor", fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
                 Text("Doctor Registration", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))

@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -140,7 +141,7 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                doctorInfo?.specialization ?: "General Physician",
+                                doctorInfo?.specialization ?: "Not specified",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -233,69 +234,21 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                         modifier = Modifier.weight(1f)
                     )
                     ActionCard(
-                        title = "Edit Profile",
-                        icon = Icons.Default.Edit,
-                        onClick = { navController.navigate("edit_doctor_profile/$currentUserId") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
                         title = "View Patients",
                         icon = Icons.Default.Person,
                         onClick = { navController.navigate("patients_screen/$currentUserId") },
                         modifier = Modifier.weight(1f)
                     )
-                    ActionCard(
-                        title = "Health Tips",
-                        icon = Icons.Default.Notifications,
-                        onClick = { navController.navigate("health_tips") },
-                        modifier = Modifier.weight(1f)
-                    )
                 }
             }
 
-            // Settings and Logout
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            "Account",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            TextButton(
-                                onClick = { navController.navigate("settings") }
-                            ) {
-                                Text("Settings")
-                            }
-                            TextButton(
-                                onClick = {
-                                    sessionManager.clearLoginSession()
-                                    navController.navigate("welcome") { popUpTo(0) { inclusive = true } }
-                                }
-                            ) {
-                                Text("Logout")
-                            }
-                        }
-                    }
-                }
+                ActionCard(
+                    title = "Settings",
+                    icon = Icons.Default.Settings,
+                    onClick = { navController.navigate("settings") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -350,122 +303,6 @@ fun DoctorProfileScreen(navController: NavController, userId: Int) {
                     }
                 }
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditDoctorProfileScreen(navController: NavController, userId: Int) {
-    val context = LocalContext.current
-    val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
-    val coroutineScope = rememberCoroutineScope()
-
-    var user by remember { mutableStateOf<UserEntity?>(null) }
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var experience by remember { mutableStateOf(0) }
-    var specialization by remember { mutableStateOf("") }
-
-    LaunchedEffect(userId) {
-        val fetchedUser = withContext(Dispatchers.IO) {
-            userDao.getUserById(userId)
-        }
-        fetchedUser?.let {
-            user = it
-            name = it.name
-            phone = it.phone
-            experience = it.experience?.toIntOrNull() ?: 0
-            specialization = it.specialization ?: ""
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Profile") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(24.dp)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Full Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Phone Number") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = specialization,
-                onValueChange = { specialization = it },
-                label = { Text("Specialization") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = experience.toString(),
-                onValueChange = { newValue ->
-                    val filtered = newValue.filter { it.isDigit() }
-                    experience = filtered.toIntOrNull() ?: 0
-                },
-                label = { Text("Experience (years)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                trailingIcon = {
-                    Row {
-                        IconButton(
-                            onClick = { if (experience > 0) experience-- },
-                            enabled = experience > 0
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Decrease")
-                        }
-                        IconButton(
-                            onClick = { if (experience < 60) experience++ },
-                            enabled = experience < 60
-                        ) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Increase")
-                        }
-                    }
-                }
-            )
-
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        user?.let {
-                            val updated = it.copy(
-                                name = name,
-                                phone = phone,
-                                experience = experience.toString(),
-                                specialization = specialization
-                            )
-                            withContext(Dispatchers.IO) {
-                                userDao.updateUser(updated)
-                            }
-                            navController.popBackStack()
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Changes")
-            }
         }
     }
 } 

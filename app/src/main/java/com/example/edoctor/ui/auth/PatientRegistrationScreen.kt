@@ -118,7 +118,14 @@ fun PatientRegistrationScreen(navController: NavController) {
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                BackButton(navController)
+                Button(
+                    onClick = { navController.navigate("login/patient") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Text("Login as Patient")
+                }
 
                 Text(
                     text = "Fill Your Details to Register as Patient",
