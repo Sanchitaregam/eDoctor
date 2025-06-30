@@ -13,6 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -53,9 +56,9 @@ fun SettingsScreen(navController: NavController) {
     val sessionManager = remember { SessionManager(context) }
     val coroutineScope = rememberCoroutineScope()
     var user by remember { mutableStateOf<Any?>(null) }
-    var showProfileDialog by remember { mutableStateOf(false) }
     var showEditDialog by remember { mutableStateOf(false) }
     var editedName by remember { mutableStateOf("") }
+    var editedEmail by remember { mutableStateOf("") }
     var editedPhone by remember { mutableStateOf("") }
     var editedAddress by remember { mutableStateOf("") }
     var editedDob by remember { mutableStateOf("") }
@@ -63,6 +66,22 @@ fun SettingsScreen(navController: NavController) {
     var editedSpecialization by remember { mutableStateOf("") }
     var editedExperience by remember { mutableStateOf("") }
     var editedBloodGroup by remember { mutableStateOf("") }
+    var editedPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var showPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf("") }
+    var showChangeEmailDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var newEmail by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf("") }
+    var currentPasswordForEmail by remember { mutableStateOf("") }
+    var passwordError by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmNewPassword by remember { mutableStateOf("") }
+    var passwordChangeError by remember { mutableStateOf("") }
+    var showNewPassword by remember { mutableStateOf(false) }
+    var showConfirmNewPassword by remember { mutableStateOf(false) }
 
     val currentUserId = sessionManager.getCurrentUserId()
 
@@ -85,6 +104,7 @@ fun SettingsScreen(navController: NavController) {
             when (loadedUser) {
                 is AdminEntity -> {
                     editedName = loadedUser.name
+                    editedEmail = loadedUser.email
                     editedPhone = loadedUser.phone
                     editedAddress = loadedUser.address ?: ""
                     editedDob = loadedUser.dob ?: ""
@@ -92,6 +112,7 @@ fun SettingsScreen(navController: NavController) {
                 }
                 is DoctorEntity -> {
                     editedName = loadedUser.name
+                    editedEmail = loadedUser.email
                     editedPhone = loadedUser.phone
                     editedAddress = loadedUser.address ?: ""
                     editedDob = loadedUser.dob ?: ""
@@ -101,6 +122,7 @@ fun SettingsScreen(navController: NavController) {
                 }
                 is PatientEntity -> {
                     editedName = loadedUser.name
+                    editedEmail = loadedUser.email
                     editedPhone = loadedUser.phone
                     editedAddress = loadedUser.address ?: ""
                     editedDob = loadedUser.dob ?: ""
@@ -138,37 +160,30 @@ fun SettingsScreen(navController: NavController) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             Button(
-                onClick = { showEditDialog = true },
+                onClick = { showEditDialog = true; errorMessage = "" },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Edit Profile")
             }
-
             Button(
-                onClick = { navController.navigate("change_email") },
+                onClick = { showChangeEmailDialog = true; emailError = "" },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Change Email")
             }
-
             Button(
-                onClick = { navController.navigate("change_password/$currentUserId") },
+                onClick = { showChangePasswordDialog = true; passwordChangeError = "" },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Change Password")
             }
-
             Button(
                 onClick = {
-                    // Clear login session
                     sessionManager.clearLoginSession()
-                    
-                    // Navigate to welcome screen and clear back stack
                     navController.navigate("welcome") {
                         popUpTo("welcome") { inclusive = true }
                     }
@@ -197,6 +212,7 @@ fun SettingsScreen(navController: NavController) {
                             label = { Text("Full Name") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        
                         OutlinedTextField(
                             value = editedPhone,
                             onValueChange = { editedPhone = it },
@@ -351,51 +367,119 @@ fun SettingsScreen(navController: NavController) {
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+                        
+                        if (errorMessage.isNotEmpty()) {
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
                     }
                 },
                 confirmButton = {
                     TextButton(
                         onClick = {
+                            // Validate inputs
+                            when {
+                                editedName.isBlank() -> {
+                                    errorMessage = "Name cannot be empty"
+                                    return@TextButton
+                                }
+                                editedEmail.isBlank() -> {
+                                    errorMessage = "Email cannot be empty"
+                                    return@TextButton
+                                }
+                                !editedEmail.contains("@") || !editedEmail.contains(".") -> {
+                                    errorMessage = "Invalid email format"
+                                    return@TextButton
+                                }
+                                editedPassword.isNotEmpty() && editedPassword != confirmPassword -> {
+                                    errorMessage = "Passwords do not match"
+                                    return@TextButton
+                                }
+                                editedPassword.isNotEmpty() && editedPassword.length < 6 -> {
+                                    errorMessage = "Password must be at least 6 characters"
+                                    return@TextButton
+                                }
+                                else -> {
+                                    errorMessage = ""
+                                }
+                            }
+                            
                             coroutineScope.launch {
-                                user?.let {
-                                    withContext(Dispatchers.IO) {
-                                        when (it) {
-                                            is AdminEntity -> {
-                                                val updated = it.copy(
-                                                    name = editedName,
-                                                    phone = editedPhone,
-                                                    gender = editedGender,
-                                                    dob = editedDob,
-                                                    address = editedAddress
-                                                )
-                                                adminDao.updateAdmin(updated)
-                                            }
-                                            is DoctorEntity -> {
-                                                val updated = it.copy(
-                                                    name = editedName,
-                                                    phone = editedPhone,
-                                                    gender = editedGender,
-                                                    dob = editedDob,
-                                                    address = editedAddress,
-                                                    specialization = editedSpecialization,
-                                                    experience = editedExperience.toIntOrNull()
-                                                )
-                                                doctorDao.updateDoctor(updated)
-                                            }
-                                            is PatientEntity -> {
-                                                val updated = it.copy(
-                                                    name = editedName,
-                                                    phone = editedPhone,
-                                                    gender = editedGender,
-                                                    dob = editedDob,
-                                                    address = editedAddress,
-                                                    bloodGroup = editedBloodGroup
-                                                )
-                                                patientDao.updatePatient(updated)
+                                try {
+                                    user?.let {
+                                        withContext(Dispatchers.IO) {
+                                            when (it) {
+                                                is AdminEntity -> {
+                                                    // Check if email is already taken by another admin
+                                                    val existingAdmin = adminDao.getAdminByEmail(editedEmail)
+                                                    if (existingAdmin != null && existingAdmin.id != it.id) {
+                                                        errorMessage = "Email is already taken"
+                                                        return@withContext
+                                                    }
+                                                    
+                                                    val updated = it.copy(
+                                                        name = editedName,
+                                                        email = editedEmail,
+                                                        phone = editedPhone,
+                                                        gender = editedGender,
+                                                        dob = editedDob,
+                                                        address = editedAddress,
+                                                        password = if (editedPassword.isNotEmpty()) editedPassword else it.password
+                                                    )
+                                                    adminDao.updateAdmin(updated)
+                                                }
+                                                is DoctorEntity -> {
+                                                    // Check if email is already taken by another doctor
+                                                    val existingDoctor = doctorDao.getDoctorByEmail(editedEmail)
+                                                    if (existingDoctor != null && existingDoctor.id != it.id) {
+                                                        errorMessage = "Email is already taken"
+                                                        return@withContext
+                                                    }
+                                                    
+                                                    val updated = it.copy(
+                                                        name = editedName,
+                                                        email = editedEmail,
+                                                        phone = editedPhone,
+                                                        gender = editedGender,
+                                                        dob = editedDob,
+                                                        address = editedAddress,
+                                                        specialization = editedSpecialization,
+                                                        experience = editedExperience.toIntOrNull(),
+                                                        password = if (editedPassword.isNotEmpty()) editedPassword else it.password
+                                                    )
+                                                    doctorDao.updateDoctor(updated)
+                                                }
+                                                is PatientEntity -> {
+                                                    // Check if email is already taken by another patient
+                                                    val existingPatient = patientDao.getPatientByEmail(editedEmail)
+                                                    if (existingPatient != null && existingPatient.id != it.id) {
+                                                        errorMessage = "Email is already taken"
+                                                        return@withContext
+                                                    }
+                                                    
+                                                    val updated = it.copy(
+                                                        name = editedName,
+                                                        email = editedEmail,
+                                                        phone = editedPhone,
+                                                        gender = editedGender,
+                                                        dob = editedDob,
+                                                        address = editedAddress,
+                                                        bloodGroup = editedBloodGroup,
+                                                        password = if (editedPassword.isNotEmpty()) editedPassword else it.password
+                                                    )
+                                                    patientDao.updatePatient(updated)
+                                                }
                                             }
                                         }
+                                        showEditDialog = false
+                                        editedPassword = ""
+                                        confirmPassword = ""
                                     }
-                                    showEditDialog = false
+                                } catch (e: Exception) {
+                                    errorMessage = "Failed to update profile: ${e.message}"
                                 }
                             }
                         }
@@ -404,9 +488,194 @@ fun SettingsScreen(navController: NavController) {
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showEditDialog = false }) {
+                    TextButton(onClick = { 
+                        showEditDialog = false 
+                        errorMessage = ""
+                        editedPassword = ""
+                        confirmPassword = ""
+                    }) {
                         Text("Cancel")
                     }
+                }
+            )
+        }
+
+        // Change Email Dialog
+        if (showChangeEmailDialog) {
+            AlertDialog(
+                onDismissRequest = { showChangeEmailDialog = false },
+                title = { Text("Change Email") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = newEmail,
+                            onValueChange = { newEmail = it },
+                            label = { Text("New Email") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = currentPasswordForEmail,
+                            onValueChange = { currentPasswordForEmail = it },
+                            label = { Text("Current Password") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (emailError.isNotEmpty()) {
+                            Text(emailError, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        coroutineScope.launch {
+                            if (newEmail.isBlank() || !newEmail.contains("@") || !newEmail.contains(".")) {
+                                emailError = "Enter a valid email"
+                                return@launch
+                            }
+                            if (currentPasswordForEmail.isBlank()) {
+                                emailError = "Enter your current password"
+                                return@launch
+                            }
+                            val userRole = sessionManager.getCurrentUserRole()?.lowercase()
+                            val currentUserId = sessionManager.getCurrentUserId()
+                            val userEntity = when (userRole) {
+                                "admin" -> adminDao.getAdminById(currentUserId)
+                                "doctor" -> doctorDao.getDoctorById(currentUserId)
+                                "patient" -> patientDao.getPatientById(currentUserId)
+                                else -> null
+                            }
+                            if (userEntity == null) {
+                                emailError = "User not found"
+                                return@launch
+                            }
+                            val correctPassword = when (userEntity) {
+                                is AdminEntity -> userEntity.password
+                                is DoctorEntity -> userEntity.password
+                                is PatientEntity -> userEntity.password
+                                else -> ""
+                            }
+                            if (currentPasswordForEmail != correctPassword) {
+                                emailError = "Incorrect password"
+                                return@launch
+                            }
+                            // Check for email uniqueness
+                            val emailTaken = when (userRole) {
+                                "admin" -> adminDao.getAdminByEmail(newEmail)
+                                "doctor" -> doctorDao.getDoctorByEmail(newEmail)
+                                "patient" -> patientDao.getPatientByEmail(newEmail)
+                                else -> null
+                            }
+                            if (emailTaken != null && (emailTaken as? AdminEntity)?.id != currentUserId && (emailTaken as? DoctorEntity)?.id != currentUserId && (emailTaken as? PatientEntity)?.id != currentUserId) {
+                                emailError = "Email already in use"
+                                return@launch
+                            }
+                            // Update email
+                            when (userEntity) {
+                                is AdminEntity -> adminDao.updateAdmin(userEntity.copy(email = newEmail))
+                                is DoctorEntity -> doctorDao.updateDoctor(userEntity.copy(email = newEmail))
+                                is PatientEntity -> patientDao.updatePatient(userEntity.copy(email = newEmail))
+                            }
+                            showChangeEmailDialog = false
+                            newEmail = ""
+                            currentPasswordForEmail = ""
+                        }
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showChangeEmailDialog = false
+                        newEmail = ""
+                        currentPasswordForEmail = ""
+                        emailError = ""
+                    }) { Text("Cancel") }
+                }
+            )
+        }
+
+        // Change Password Dialog
+        if (showChangePasswordDialog) {
+            AlertDialog(
+                onDismissRequest = { showChangePasswordDialog = false },
+                title = { Text("Change Password") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            label = { Text("New Password") },
+                            visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showNewPassword = !showNewPassword }) {
+                                    Icon(
+                                        if (showNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (showNewPassword) "Hide password" else "Show password"
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = confirmNewPassword,
+                            onValueChange = { confirmNewPassword = it },
+                            label = { Text("Confirm New Password") },
+                            visualTransformation = if (showConfirmNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showConfirmNewPassword = !showConfirmNewPassword }) {
+                                    Icon(
+                                        if (showConfirmNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (showConfirmNewPassword) "Hide password" else "Show password"
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (passwordChangeError.isNotEmpty()) {
+                            Text(passwordChangeError, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        coroutineScope.launch {
+                            if (newPassword.isBlank() || newPassword.length < 6) {
+                                passwordChangeError = "Password must be at least 6 characters"
+                                return@launch
+                            }
+                            if (newPassword != confirmNewPassword) {
+                                passwordChangeError = "Passwords do not match"
+                                return@launch
+                            }
+                            val userRole = sessionManager.getCurrentUserRole()?.lowercase()
+                            val currentUserId = sessionManager.getCurrentUserId()
+                            val userEntity = when (userRole) {
+                                "admin" -> adminDao.getAdminById(currentUserId)
+                                "doctor" -> doctorDao.getDoctorById(currentUserId)
+                                "patient" -> patientDao.getPatientById(currentUserId)
+                                else -> null
+                            }
+                            if (userEntity == null) {
+                                passwordChangeError = "User not found"
+                                return@launch
+                            }
+                            // Update password
+                            when (userEntity) {
+                                is AdminEntity -> adminDao.updateAdmin(userEntity.copy(password = newPassword))
+                                is DoctorEntity -> doctorDao.updateDoctor(userEntity.copy(password = newPassword))
+                                is PatientEntity -> patientDao.updatePatient(userEntity.copy(password = newPassword))
+                            }
+                            showChangePasswordDialog = false
+                            newPassword = ""
+                            confirmNewPassword = ""
+                        }
+                    }) { Text("Save") }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showChangePasswordDialog = false
+                        newPassword = ""
+                        confirmNewPassword = ""
+                        passwordChangeError = ""
+                    }) { Text("Cancel") }
                 }
             )
         }

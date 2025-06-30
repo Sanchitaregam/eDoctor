@@ -226,7 +226,7 @@ fun PatientRegistrationScreen(navController: NavController) {
                         value = bloodGroup,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Blood Group (Optional)") },
+                        label = { Text("Blood Group") },
                         trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Blood Group") },
                         modifier = Modifier.menuAnchor().fillMaxWidth()
                     )

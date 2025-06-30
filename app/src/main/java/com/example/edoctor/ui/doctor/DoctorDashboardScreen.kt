@@ -72,9 +72,9 @@ fun DoctorDashboardScreen(navController: NavController, userId: Int) {
             
             // Load upcoming appointments
             val appointments = withContext(Dispatchers.IO) {
-                appointmentDao.getAppointmentsForDoctor(currentUserId)
+                appointmentDao.getUpcomingAppointmentsForDoctor(currentUserId)
             }
-            upcomingAppointments = appointments.sortedBy { it.date }.take(5) // Show next 5 appointments
+            upcomingAppointments = appointments // Show all upcoming appointments
         }
     }
 

@@ -408,16 +408,16 @@ fun ProfileInfoRow(
             Spacer(modifier = Modifier.width(12.dp))
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
+        Text(
+            text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
+        )
+        Text(
+            text = value,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
-            )
+        )
         }
     }
 }
@@ -501,27 +501,7 @@ fun AppointmentCard(appointment: AppointmentEntity) {
                         "Patient: ${appointment.patientName}",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Status: ${appointment.status}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = when (appointment.status.lowercase()) {
-                            "confirmed" -> Color.Green
-                            "pending" -> Color(0xFFFF8C00) // Orange color
-                            "cancelled" -> Color.Red
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        }
-                    )
                 }
-            }
-            
-            if (!appointment.notes.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    "Notes: ${appointment.notes}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }

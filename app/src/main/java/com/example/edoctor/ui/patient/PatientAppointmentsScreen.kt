@@ -45,16 +45,10 @@ fun PatientAppointmentsScreen(navController: NavController, patientId: Int) {
         if (currentPatientId != -1) {
             try {
                 val allAppointments = withContext(Dispatchers.IO) {
-                    appointmentDao.getAppointmentsByPatientId(currentPatientId)
+                    appointmentDao.getUpcomingAppointmentsByPatientId(currentPatientId)
                 }
                 
-                // Filter to only show upcoming appointments (today and future)
-                val today = java.time.LocalDate.now().toString()
-                val upcomingAppointments = allAppointments.filter { appointment ->
-                    appointment.date >= today
-                }
-                
-                appointments = upcomingAppointments.sortedBy { it.date }
+                appointments = allAppointments
             } catch (e: Exception) {
                 appointments = emptyList()
             } finally {
@@ -152,9 +146,6 @@ fun PatientAppointmentsScreen(navController: NavController, patientId: Int) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Date: ${appointment.date}")
                             Text("Time: ${appointment.time}")
-                            if (!appointment.notes.isNullOrEmpty()) {
-                                Text("Notes: ${appointment.notes}")
-                            }
                         }
                     }
                 }

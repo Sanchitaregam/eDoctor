@@ -45,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 
 // Import moved UI components
-import com.example.edoctor.ui.admin.AdminProfileScreen
+import com.example.edoctor.ui.admin.AdminDashboardScreen
 import com.example.edoctor.ui.admin.AdminDoctorsScreen
 import com.example.edoctor.ui.admin.AdminPatientsScreen
 import com.example.edoctor.ui.admin.AdminAppointmentsScreen
@@ -61,8 +61,6 @@ import com.example.edoctor.ui.auth.AdminRegistrationScreen
 import com.example.edoctor.ui.auth.PatientRegistrationScreen
 import com.example.edoctor.ui.auth.EnhancedDoctorRegistrationScreen
 import com.example.edoctor.ui.common.SettingsScreen
-import com.example.edoctor.ui.common.ChangeEmailScreen
-import com.example.edoctor.ui.common.ChangePasswordScreen
 import com.example.edoctor.ui.common.CalendarScreen
 import com.example.edoctor.ui.common.AppointmentCard
 import com.example.edoctor.utils.SessionManager
@@ -139,7 +137,7 @@ class MainActivity : ComponentActivity() {
                             arguments = listOf(navArgument("userId") { type = NavType.IntType })
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            AdminProfileScreen(navController, userId)
+                            AdminDashboardScreen(navController, userId)
                         }
 
                         // Admin management screens
@@ -227,16 +225,6 @@ class MainActivity : ComponentActivity() {
                             DoctorAppointmentsScreen(navController, doctorId)
                         }
 
-                        composable(
-                            "change_password/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            ChangePasswordScreen(navController, userId)
-                        }
-                        composable("change_email") {
-                            ChangeEmailScreen(navController)
-                        }
                         composable("settings") { SettingsScreen(navController) }
                         
                         // PatientsScreen and PatientCard moved to ui/doctor/DoctorPatientsScreen.kt
@@ -492,7 +480,7 @@ fun BookAppointmentScreen(
                         
                         // Show snackbar after navigation (optional)
                     snackbarHostState.showSnackbar("Appointment booked successfully")
-                    }
+                }
             }) {
                 Text("Confirm Booking")
             }

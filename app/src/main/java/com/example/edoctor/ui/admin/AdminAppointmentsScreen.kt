@@ -38,8 +38,8 @@ fun AdminAppointmentsScreen(navController: NavController) {
 
     LaunchedEffect(Unit) {
         try {
-            val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
-            appointments = allAppointments.sortedBy { it.date }
+            val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getUpcomingAppointments() }
+            appointments = allAppointments
         } catch (e: Exception) {
             // Handle error
         } finally {

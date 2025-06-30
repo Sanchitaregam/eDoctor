@@ -67,7 +67,8 @@ fun AdminRegistrationScreen(navController: NavController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var gender by remember { mutableStateOf("Other") } // Example default
+    var gender by remember { mutableStateOf("") }
+    var showGenderDropdown by remember { mutableStateOf(false) }
     var dob by remember { mutableStateOf<LocalDate?>(null) }
     var address by remember { mutableStateOf("") }
 
@@ -138,19 +139,25 @@ fun AdminRegistrationScreen(navController: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        // Gender selection
-        Text("Gender", fontWeight = FontWeight.Bold)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        // Gender Dropdown
+        ExposedDropdownMenuBox(
+            expanded = showGenderDropdown,
+            onExpandedChange = { showGenderDropdown = !showGenderDropdown }
         ) {
-            listOf("Male", "Female", "Other").forEach { option ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = gender == option,
-                        onClick = { gender = option }
-                    )
-                    Text(option)
+            OutlinedTextField(
+                value = gender,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Gender") },
+                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Select Gender") },
+                modifier = Modifier.menuAnchor().fillMaxWidth()
+            )
+            ExposedDropdownMenu(expanded = showGenderDropdown, onDismissRequest = { showGenderDropdown = false }) {
+                listOf("Male", "Female", "Other").forEach { option ->
+                    DropdownMenuItem(text = { Text(option) }, onClick = {
+                        gender = option
+                        showGenderDropdown = false
+                    })
                 }
             }
         }
@@ -182,7 +189,7 @@ fun AdminRegistrationScreen(navController: NavController) {
                     onValueChange = { address = it },
                     label = { Text("Address") },
                     modifier = Modifier.fillMaxWidth()
-                )
+        )
 
         if (errorMessage.isNotEmpty()) {
             Text(text = errorMessage, color = MaterialTheme.colorScheme.error)

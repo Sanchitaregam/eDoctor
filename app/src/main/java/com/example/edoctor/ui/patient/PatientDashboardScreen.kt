@@ -73,10 +73,10 @@ fun PatientDashboardScreen(navController: NavController, userId: Int) {
             
             // Load booked appointments
             val appointments = withContext(Dispatchers.IO) {
-                appointmentDao.getAppointmentsByPatientId(currentUserId)
+                appointmentDao.getUpcomingAppointmentsByPatientId(currentUserId)
             }
             totalAppointmentCount = appointments.size
-            bookedAppointments = appointments.sortedBy { it.date }.take(5) // Show next 5 appointments
+            bookedAppointments = appointments // Show all upcoming appointments
         }
     }
 

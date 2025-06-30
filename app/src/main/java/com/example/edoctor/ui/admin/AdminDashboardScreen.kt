@@ -48,7 +48,7 @@ import com.example.edoctor.ui.common.ActionCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminProfileScreen(navController: NavController, userId: Int) {
+fun AdminDashboardScreen(navController: NavController, userId: Int) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getDatabase(context) }
     val adminDao = db.adminDao()
@@ -78,7 +78,7 @@ fun AdminProfileScreen(navController: NavController, userId: Int) {
                 
                 val allDoctors = withContext(Dispatchers.IO) { doctorDao.getAllDoctors() }
                 val allPatients = withContext(Dispatchers.IO) { patientDao.getAllPatients() }
-                val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getAllAppointments() }
+                val allAppointments = withContext(Dispatchers.IO) { appointmentDao.getUpcomingAppointments() }
                 doctors = allDoctors
                 patients = allPatients
                 appointments = allAppointments
