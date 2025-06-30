@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -31,28 +32,30 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
     val coroutineScope = rememberCoroutineScope()
 
     var appointments by remember { mutableStateOf<List<AppointmentEntity>>(emptyList()) }
-
-    var patientName by remember { mutableStateOf(TextFieldValue()) }
-    var date by remember { mutableStateOf(TextFieldValue()) }
-    var time by remember { mutableStateOf(TextFieldValue()) }
-    var notes by remember { mutableStateOf(TextFieldValue()) }
+    var isLoading by remember { mutableStateOf(true) }
 
     fun loadAppointments() {
         coroutineScope.launch {
-            appointments = withContext(Dispatchers.IO) {
-                appointmentDao.getAppointmentsByDoctorAndPatient(doctorId, patientId) // <-- Corrected method name
+            try {
+                appointments = withContext(Dispatchers.IO) {
+                    appointmentDao.getAppointmentsByPatientId(patientId)
+                }
+            } catch (e: Exception) {
+                appointments = emptyList()
+            } finally {
+                isLoading = false
             }
         }
     }
 
-    LaunchedEffect(doctorId, patientId) {
+    LaunchedEffect(patientId) {
         loadAppointments()
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Appointments") },
+                title = { Text("My Appointments (${appointments.size})") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -61,79 +64,81 @@ fun PatientAppointmentsScreen(navController: NavController, doctorId: Int, patie
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            Text("Add Appointment", style = MaterialTheme.typography.titleMedium)
-
-            OutlinedTextField(
-                value = patientName,
-                onValueChange = { patientName = it },
-                label = { Text("Patient Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = date,
-                onValueChange = { date = it },
-                label = { Text("Date (e.g., 2025-06-10)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = time,
-                onValueChange = { time = it },
-                label = { Text("Time (e.g., 10:30 AM)") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = notes,
-                onValueChange = { notes = it },
-                label = { Text("Notes") },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        val newAppointment = AppointmentEntity(
-                            doctorId = doctorId,
-                            patientId = patientId,
-                            patientName = patientName.text,
-                            date = date.text,
-                            time = time.text,
-                            notes = notes.text
-                        )
-                        withContext(Dispatchers.IO) {
-                            appointmentDao.insertAppointment(newAppointment)
-                        }
-                        loadAppointments()
-                        patientName = TextFieldValue()
-                        date = TextFieldValue()
-                        time = TextFieldValue()
-                        notes = TextFieldValue()
-                        Toast.makeText(context, "Appointment added", Toast.LENGTH_SHORT).show()
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = androidx.compose.ui.Alignment.Center
             ) {
-                Text("Save Appointment")
+                CircularProgressIndicator()
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Upcoming Appointments", style = MaterialTheme.typography.titleMedium)
-
-            LazyColumn {
+        } else if (appointments.isEmpty()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "No Appointments Yet",
+                    style = MaterialTheme.typography.headlineMedium,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "You don't have any appointments booked yet. Book your first appointment to get started!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = {
+                        navController.navigate("select_doctor/$patientId")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Book New Appointment")
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        "Your Appointments",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                    )
+                }
+                
                 items(appointments) { appointment ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         elevation = CardDefaults.cardElevation(2.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("Patient: ${appointment.patientName}")
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Appointment with Dr. (ID: ${appointment.doctorId})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text("Date: ${appointment.date}")
                             Text("Time: ${appointment.time}")
                             if (!appointment.notes.isNullOrEmpty()) {

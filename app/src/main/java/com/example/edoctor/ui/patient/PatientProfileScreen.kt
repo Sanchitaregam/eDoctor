@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -222,41 +223,6 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
                 )
             }
 
-            // Booked Appointments Section
-            item {
-                Text(
-                    "My Appointments",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            if (bookedAppointments.isNotEmpty()) {
-                items(bookedAppointments) { appointment ->
-                    PatientAppointmentCard(appointment = appointment)
-                }
-            } else {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "No appointments booked yet",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
             // Quick Actions
             item {
                 Text(
@@ -267,80 +233,34 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
-                        title = "Edit Profile",
-                        icon = Icons.Default.Edit,
-                        onClick = { navController.navigate("edit_patient_profile/${patient?.id ?: 0}") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActionCard(
-                        title = "Health Tips",
-                        icon = Icons.Default.HealthAndSafety,
-                        onClick = { navController.navigate("health_tips") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ActionCard(
+                    title = "My Appointments",
+                    subtitle = "View your booked appointments",
+                    icon = Icons.Default.CalendarToday,
+                    onClick = {
+                        val currentUserId = sessionManager.getCurrentUserId()
+                        navController.navigate("patient_appointments/0/$currentUserId")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ActionCard(
-                        title = "Medical History",
-                        icon = Icons.Default.Person,
-                        onClick = { /* Navigate to medical history */ },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActionCard(
-                        title = "Settings",
-                        icon = Icons.Default.Person,
-                        onClick = { navController.navigate("settings") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                ActionCard(
+                    title = "Medical History",
+                    icon = Icons.Default.Person,
+                    onClick = { /* Navigate to medical history */ },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
-            // Account Section
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            "Account",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            TextButton(
-                                onClick = { navController.navigate("settings") }
-                            ) {
-                                Text("Settings")
-                            }
-                            TextButton(
-                                onClick = {
-                                    sessionManager.clearLoginSession()
-                                    navController.navigate("welcome") { popUpTo(0) { inclusive = true } }
-                                }
-                            ) {
-                                Text("Logout")
-                            }
-                        }
-                    }
-                }
+                ActionCard(
+                    title = "Settings",
+                    icon = Icons.Default.Settings,
+                    onClick = { navController.navigate("settings") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 
@@ -367,140 +287,6 @@ fun PatientProfileScreen(navController: NavController, userId: Int) {
                     }
                 }
             )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditPatientProfileScreen(navController: NavController, userId: Int) {
-    val context = LocalContext.current
-    val db = remember { AppDatabase.getDatabase(context) }
-    val userDao = db.userDao()
-    val coroutineScope = rememberCoroutineScope()
-
-    var user by remember { mutableStateOf<UserEntity?>(null) }
-    var name by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var dob by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var bloodGroup by remember { mutableStateOf("") }
-    var emergencyContact by remember { mutableStateOf("") }
-
-    LaunchedEffect(userId) {
-        val fetchedUser = withContext(Dispatchers.IO) {
-            userDao.getUserById(userId)
-        }
-        fetchedUser?.let {
-            user = it
-            name = it.name
-            phone = it.phone
-            dob = it.dob ?: ""
-            address = it.address ?: ""
-            bloodGroup = it.bloodGroup ?: ""
-            emergencyContact = it.emergencyContact ?: ""
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Edit Profile") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            item {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Full Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                OutlinedTextField(
-                    value = phone,
-                    onValueChange = { phone = it },
-                    label = { Text("Phone Number") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                OutlinedTextField(
-                    value = dob,
-                    onValueChange = { dob = it },
-                    label = { Text("Date of Birth") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                OutlinedTextField(
-                    value = address,
-                    onValueChange = { address = it },
-                    label = { Text("Address") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-            }
-            
-            item {
-                OutlinedTextField(
-                    value = bloodGroup,
-                    onValueChange = { bloodGroup = it },
-                    label = { Text("Blood Group") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                OutlinedTextField(
-                    value = emergencyContact,
-                    onValueChange = { emergencyContact = it },
-                    label = { Text("Emergency Contact") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            item {
-                Button(
-                    onClick = {
-                        coroutineScope.launch {
-                            user?.let {
-                                val updated = it.copy(
-                                    name = name,
-                                    phone = phone,
-                                    dob = dob.ifEmpty { null },
-                                    address = address.ifEmpty { null },
-                                    bloodGroup = bloodGroup.ifEmpty { null },
-                                    emergencyContact = emergencyContact.ifEmpty { null }
-                                )
-                                withContext(Dispatchers.IO) {
-                                    userDao.updateUser(updated)
-                                }
-                                navController.popBackStack()
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Save Changes")
-                }
-            }
         }
     }
 } 

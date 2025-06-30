@@ -11,4 +11,7 @@ interface AvailabilityDao {
 
     @Query("SELECT * FROM availability WHERE doctorId = :doctorId")
     suspend fun getAvailabilityForDoctor(doctorId: Int): List<AvailabilityEntity>
+
+    @Query("DELETE FROM availability WHERE doctorId = :doctorId")
+    suspend fun deleteAllForDoctor(doctorId: Int)
 }
