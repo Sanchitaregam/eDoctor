@@ -40,6 +40,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
 
+// Import moved UI components
+import com.example.edoctor.ui.admin.AdminProfileScreen
+import com.example.edoctor.ui.doctor.DoctorProfileScreen
+import com.example.edoctor.ui.doctor.DoctorAvailabilityScreen
+import com.example.edoctor.ui.patient.PatientProfileScreen
+import com.example.edoctor.ui.patient.PatientAppointmentsScreen
+import com.example.edoctor.ui.patient.PatientDetailsScreen
+import com.example.edoctor.ui.auth.LoginScreen
+import com.example.edoctor.ui.auth.LoginRoleScreen
+import com.example.edoctor.ui.auth.AdminRegistrationScreen
+import com.example.edoctor.ui.auth.PatientRegistrationScreen
+import com.example.edoctor.ui.auth.EnhancedDoctorRegistrationScreen
+import com.example.edoctor.ui.common.HealthTipsScreen
+import com.example.edoctor.ui.common.SettingsScreen
+import com.example.edoctor.ui.common.ChangeEmailScreen
+import com.example.edoctor.ui.common.ChangePasswordScreen
+import com.example.edoctor.ui.common.CalendarScreen
+import com.example.edoctor.utils.SessionManager
+
+// Import data layer
+import com.example.edoctor.data.database.AppDatabase
+import com.example.edoctor.data.dao.UserDao
+import com.example.edoctor.data.dao.AppointmentDao
+import com.example.edoctor.data.dao.AvailabilityDao
+import com.example.edoctor.data.entities.UserEntity
+import com.example.edoctor.data.entities.AppointmentEntity
+import com.example.edoctor.data.entities.AvailabilityEntity
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,22 +105,6 @@ class MainActivity : ComponentActivity() {
                         ) { backStackEntry ->
                             val userId = backStackEntry.arguments?.getInt("userId") ?: 0
                             DoctorProfileScreen(navController, userId)
-                        }
-
-                        composable(
-                            "edit_doctor_profile/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            EditDoctorProfileScreen(navController, userId)
-                        }
-
-                        composable(
-                            "edit_patient_profile/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            EditPatientProfileScreen(navController, userId)
                         }
 
                         composable(
@@ -143,28 +155,11 @@ class MainActivity : ComponentActivity() {
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             val patientName = backStackEntry.arguments?.getString("patientName") ?: ""
                             CalendarScreen { selectedDate ->
-                                // Navigate to book_appointment with date and time (hardcoded time for now)
-                                navController.navigate("book_appointment/$doctorId/$patientId/$patientName/${selectedDate.toString()}/10:00 AM")
+                                // For now, just show the selected date
+                                // TODO: Implement appointment booking
                             }
                         }
 
-                        composable(
-                            "book_appointment/{doctorId}/{patientId}/{patientName}/{date}/{time}",
-                            arguments = listOf(
-                                navArgument("doctorId") { type = NavType.IntType },
-                                navArgument("patientId") { type = NavType.IntType },
-                                navArgument("patientName") { type = NavType.StringType },
-                                navArgument("date") { type = NavType.StringType },
-                                navArgument("time") { type = NavType.StringType }
-                            )
-                        ) { backStackEntry ->
-                            val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
-                            val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
-                            val patientName = backStackEntry.arguments?.getString("patientName") ?: ""
-                            val date = backStackEntry.arguments?.getString("date") ?: ""
-                            val time = backStackEntry.arguments?.getString("time") ?: ""
-                            BookAppointmentScreen(navController, doctorId, patientId, patientName, date, time)
-                        }
                         composable(
                             "patient_appointments/{doctorId}/{patientId}",
                             arguments = listOf(
@@ -190,30 +185,6 @@ class MainActivity : ComponentActivity() {
                             ChangeEmailScreen(navController, userId)
                         }
                         composable("settings") { SettingsScreen(navController) }
-                        
-                        composable(
-                            "patients_screen/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            PatientsScreen(navController, userId)
-                        }
-                        
-                        composable(
-                            "messages_screen/{userId}",
-                            arguments = listOf(navArgument("userId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val userId = backStackEntry.arguments?.getInt("userId") ?: 0
-                            MessagesScreen(navController, userId)
-                        }
-                        
-                        composable(
-                            "select_doctor/{patientId}",
-                            arguments = listOf(navArgument("patientId") { type = NavType.IntType })
-                        ) { backStackEntry ->
-                            val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
-                            DoctorSelectionScreen(navController, patientId)
-                        }
                     }
                 }
             }
