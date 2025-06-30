@@ -29,7 +29,6 @@ import androidx.compose.foundation.verticalScroll
 import com.example.edoctor.data.database.AppDatabase
 import com.example.edoctor.data.dao.PatientDao
 import com.example.edoctor.data.entities.PatientEntity
-import com.example.edoctor.utils.BackButton
 import com.example.edoctor.utils.validatePasswordStrength
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import android.os.Build

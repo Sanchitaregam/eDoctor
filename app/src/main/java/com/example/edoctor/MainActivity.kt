@@ -61,8 +61,10 @@ import com.example.edoctor.ui.auth.AdminRegistrationScreen
 import com.example.edoctor.ui.auth.PatientRegistrationScreen
 import com.example.edoctor.ui.auth.EnhancedDoctorRegistrationScreen
 import com.example.edoctor.ui.common.SettingsScreen
-import com.example.edoctor.ui.common.CalendarScreen
 import com.example.edoctor.ui.common.AppointmentCard
+import com.example.edoctor.ui.patient.BookAppointmentDoctorSelectionScreen
+import com.example.edoctor.ui.patient.MedicalHistoryScreen
+import com.example.edoctor.ui.patient.AppointmentBookingScreen
 import com.example.edoctor.utils.SessionManager
 
 // Import data layer
@@ -77,10 +79,6 @@ import com.example.edoctor.data.entities.DoctorEntity
 import com.example.edoctor.data.entities.PatientEntity
 import com.example.edoctor.data.entities.AppointmentEntity
 import com.example.edoctor.data.entities.AvailabilityEntity
-
-// Import patient UI components
-import com.example.edoctor.ui.patient.BookAppointmentDoctorSelectionScreen
-import com.example.edoctor.ui.patient.MedicalHistoryScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -173,7 +171,7 @@ class MainActivity : ComponentActivity() {
                             val doctorId = backStackEntry.arguments?.getInt("doctorId") ?: 0
                             val patientId = backStackEntry.arguments?.getInt("patientId") ?: 0
                             val patientName = backStackEntry.arguments?.getString("patientName") ?: ""
-                            CalendarScreen(navController, doctorId, patientId, patientName)
+                            AppointmentBookingScreen(navController, doctorId, patientId, patientName)
                         }
 
                         composable(

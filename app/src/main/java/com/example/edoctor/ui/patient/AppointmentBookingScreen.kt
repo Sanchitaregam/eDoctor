@@ -1,4 +1,4 @@
-package com.example.edoctor.ui.common
+package com.example.edoctor.ui.patient
 
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -44,7 +44,7 @@ import com.example.edoctor.data.dao.AppointmentDao
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CalendarScreen(
+fun AppointmentBookingScreen(
     navController: NavController,
     doctorId: Int,
     patientId: Int,

@@ -33,7 +33,6 @@ import androidx.compose.foundation.verticalScroll
 import com.example.edoctor.data.database.AppDatabase
 import com.example.edoctor.data.dao.DoctorDao
 import com.example.edoctor.data.entities.DoctorEntity
-import com.example.edoctor.utils.BackButton
 import com.example.edoctor.utils.validatePasswordStrength
 import com.example.edoctor.ui.common.DatePicker
 
